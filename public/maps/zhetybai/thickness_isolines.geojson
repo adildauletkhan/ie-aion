@@ -1,0 +1,11 @@
+{
+  "type": "FeatureCollection",
+  "name": "Изолинии эффективной толщины пласта T1-A",
+  "features": [
+    {"type": "Feature", "properties": {"parameter": "effective_thickness", "value": 10, "unit": "м", "color": "#90EE90"}, "geometry": {"type": "LineString", "coordinates": [[51.755, 43.868], [51.770, 43.870], [51.790, 43.872], [51.810, 43.873], [51.830, 43.871], [51.850, 43.867], [51.865, 43.860]]}},
+    {"type": "Feature", "properties": {"parameter": "effective_thickness", "value": 15, "unit": "м", "color": "#FFD700"}, "geometry": {"type": "LineString", "coordinates": [[51.765, 43.855], [51.785, 43.858], [51.805, 43.860], [51.825, 43.860], [51.845, 43.857], [51.860, 43.850]]}},
+    {"type": "Feature", "properties": {"parameter": "effective_thickness", "value": 20, "unit": "м", "color": "#FFA500"}, "geometry": {"type": "LineString", "coordinates": [[51.775, 43.840], [51.795, 43.843], [51.815, 43.845], [51.835, 43.844], [51.850, 43.838]]}},
+    {"type": "Feature", "properties": {"parameter": "effective_thickness", "value": 25, "unit": "м", "color": "#FF6347"}, "geometry": {"type": "LineString", "coordinates": [[51.788, 43.828], [51.805, 43.830], [51.822, 43.831], [51.838, 43.828]]}},
+    {"type": "Feature", "properties": {"parameter": "effective_thickness", "value": 30, "unit": "м", "color": "#DC143C", "note": "Максимальная толщина"}, "geometry": {"type": "LineString", "coordinates": [[51.800, 43.820], [51.812, 43.821], [51.825, 43.820], [51.832, 43.818]]}}
+  ]
+}

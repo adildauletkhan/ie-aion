@@ -1,0 +1,19 @@
+{
+  "type": "FeatureCollection",
+  "name": "Скважины месторождения Жетыбай",
+  "features": [
+    {"type": "Feature", "properties": {"well_number": "101", "type": "Добывающая", "status": "Действующая", "depth": 1265, "production_rate": 18.5, "cumulative_production": 45200, "start_date": "1965-03-15"}, "geometry": {"type": "Point", "coordinates": [51.795, 43.855]}},
+    {"type": "Feature", "properties": {"well_number": "102", "type": "Добывающая", "status": "Действующая", "depth": 1278, "production_rate": 22.3, "cumulative_production": 52800, "start_date": "1966-07-22"}, "geometry": {"type": "Point", "coordinates": [51.815, 43.845]}},
+    {"type": "Feature", "properties": {"well_number": "103", "type": "Добывающая", "status": "Действующая", "depth": 1290, "production_rate": 16.8, "cumulative_production": 38900, "start_date": "1967-11-08"}, "geometry": {"type": "Point", "coordinates": [51.835, 43.835]}},
+    {"type": "Feature", "properties": {"well_number": "104", "type": "Добывающая", "status": "Действующая", "depth": 1255, "production_rate": 20.1, "cumulative_production": 48500, "start_date": "1968-04-18"}, "geometry": {"type": "Point", "coordinates": [51.805, 43.825]}},
+    {"type": "Feature", "properties": {"well_number": "105", "type": "Добывающая", "status": "В простое", "depth": 1268, "production_rate": 0, "cumulative_production": 41200, "start_date": "1969-09-30", "note": "Требуется капитальный ремонт"}, "geometry": {"type": "Point", "coordinates": [51.825, 43.815]}},
+    {"type": "Feature", "properties": {"well_number": "106", "type": "Добывающая", "status": "Действующая", "depth": 1282, "production_rate": 19.7, "cumulative_production": 43800, "start_date": "1970-05-12"}, "geometry": {"type": "Point", "coordinates": [51.778, 43.848]}},
+    {"type": "Feature", "properties": {"well_number": "107", "type": "Добывающая", "status": "Действующая", "depth": 1295, "production_rate": 17.2, "cumulative_production": 39600, "start_date": "1971-02-25"}, "geometry": {"type": "Point", "coordinates": [51.848, 43.852]}},
+    {"type": "Feature", "properties": {"well_number": "201", "type": "Нагнетательная", "status": "Действующая", "depth": 1270, "injection_rate": 125.0, "cumulative_injection": 285000, "start_date": "1975-06-10"}, "geometry": {"type": "Point", "coordinates": [51.770, 43.868]}},
+    {"type": "Feature", "properties": {"well_number": "202", "type": "Нагнетательная", "status": "Действующая", "depth": 1275, "injection_rate": 130.5, "cumulative_injection": 298000, "start_date": "1976-08-15"}, "geometry": {"type": "Point", "coordinates": [51.855, 43.862]}},
+    {"type": "Feature", "properties": {"well_number": "203", "type": "Нагнетательная", "status": "Действующая", "depth": 1268, "injection_rate": 118.3, "cumulative_injection": 272000, "start_date": "1977-03-20"}, "geometry": {"type": "Point", "coordinates": [51.760, 43.825]}},
+    {"type": "Feature", "properties": {"well_number": "204", "type": "Нагнетательная", "status": "Действующая", "depth": 1285, "injection_rate": 135.8, "cumulative_injection": 312000, "start_date": "1978-11-05"}, "geometry": {"type": "Point", "coordinates": [51.862, 43.820]}},
+    {"type": "Feature", "properties": {"well_number": "301", "type": "Наблюдательная", "status": "Действующая", "depth": 1260, "note": "Контроль давления"}, "geometry": {"type": "Point", "coordinates": [51.812, 43.860]}},
+    {"type": "Feature", "properties": {"well_number": "302", "type": "Наблюдательная", "status": "Действующая", "depth": 1272, "note": "Контроль обводненности"}, "geometry": {"type": "Point", "coordinates": [51.792, 43.832]}}
+  ]
+}

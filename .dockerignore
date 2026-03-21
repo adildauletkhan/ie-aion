@@ -1,0 +1,11 @@
+# Shared .dockerignore (each Dockerfile also has its own: Dockerfile.*.dockerignore)
+node_modules/
+.git/
+.vscode/
+.idea/
+.DS_Store
+*.log
+tmp/
+temp/
+.env
+.env.local

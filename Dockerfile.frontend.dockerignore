@@ -1,0 +1,29 @@
+# Backend (not needed for frontend)
+backend/
+__pycache__/
+*.py[cod]
+Dockerfile.backend
+railway.backend.toml
+
+# Node
+node_modules/
+
+# IDEs
+.vscode/
+.idea/
+
+# OS
+.DS_Store
+
+# Git
+.git/
+
+# Environment files
+.env
+.env.local
+.env.production.example
+
+# Temporary
+tmp/
+temp/
+*.log

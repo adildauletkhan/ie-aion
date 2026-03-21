@@ -1,0 +1,173 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <title>Карта месторождения Жетыбай</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <style>
+        body { margin: 0; padding: 0; }
+        #map { position: absolute; top: 0; bottom: 0; width: 100%; }
+        .legend {
+            background: white;
+            padding: 10px;
+            border-radius: 5px;
+            box-shadow: 0 1px 5px rgba(0,0,0,0.4);
+        }
+        .legend h4 { margin: 0 0 10px 0; }
+        .legend-item { margin: 5px 0; display: flex; align-items: center; }
+        .legend-color { width: 20px; height: 20px; margin-right: 8px; border: 1px solid #ccc; }
+    </style>
+</head>
+<body>
+    <div id="map"></div>
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <script>
+        // Инициализация карты (центр на Жетыбай)
+        const map = L.map('map').setView([43.84, 51.81], 12);
+        
+        // Базовый слой OpenStreetMap
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            attribution: '© OpenStreetMap'
+        }).addTo(map);
+        
+        // Контроль слоёв
+        const overlays = {};
+        
+        // 1. Контур месторождения
+        fetch('field_boundary.geojson')
+            .then(r => r.json())
+            .then(data => {
+                const layer = L.geoJSON(data, {
+                    style: feature => ({
+                        color: feature.properties.name.includes('Внешний') ? '#FF6B6B' : '#4ECDC4',
+                        weight: 2,
+                        fillOpacity: 0.1
+                    }),
+                    onEachFeature: (feature, layer) => {
+                        layer.bindPopup(`<b>${feature.properties.name}</b><br>
+                                        Площадь: ${feature.properties.area_km2} км²`);
+                    }
+                }).addTo(map);
+                overlays['🗺️ Контур месторождения'] = layer;
+            });
+        
+        // 2. Изолинии толщины
+        fetch('thickness_isolines.geojson')
+            .then(r => r.json())
+            .then(data => {
+                const layer = L.geoJSON(data, {
+                    style: feature => ({
+                        color: feature.properties.color,
+                        weight: 2
+                    }),
+                    onEachFeature: (feature, layer) => {
+                        layer.bindPopup(`<b>Толщина: ${feature.properties.value} ${feature.properties.unit}</b>`);
+                    }
+                }).addTo(map);
+                overlays['📏 Изолинии толщины'] = layer;
+            });
+        
+        // 3. Изолинии пористости
+        fetch('porosity_isolines.geojson')
+            .then(r => r.json())
+            .then(data => {
+                const layer = L.geoJSON(data, {
+                    style: feature => ({
+                        color: feature.properties.color,
+                        weight: 2,
+                        dashArray: '5, 5'
+                    }),
+                    onEachFeature: (feature, layer) => {
+                        layer.bindPopup(`<b>Пористость: ${feature.properties.value}${feature.properties.unit}</b>`);
+                    }
+                }).addTo(map);
+                overlays['🔵 Изолинии пористости'] = layer;
+            });
+        
+        // 4. Зоны дренирования
+        fetch('drainage_zones.geojson')
+            .then(r => r.json())
+            .then(data => {
+                const layer = L.geoJSON(data, {
+                    style: () => ({
+                        color: '#FFD93D',
+                        weight: 2,
+                        fillOpacity: 0.2
+                    }),
+                    onEachFeature: (feature, layer) => {
+                        const p = feature.properties;
+                        layer.bindPopup(`<b>${p.zone_name}</b><br>
+                                        Код: ${p.zone_code}<br>
+                                        КИН: ${p.current_kin}%<br>
+                                        Запасы: ${p.reserves_remaining.toLocaleString()} т<br>
+                                        Скважина: ${p.main_well}`);
+                    }
+                }).addTo(map);
+                overlays['🎯 Зоны дренирования'] = layer;
+            });
+        
+        // 5. Скважины
+        fetch('wells.geojson')
+            .then(r => r.json())
+            .then(data => {
+                const getIcon = (type, status) => {
+                    let color = '#999';
+                    if (type === 'Добывающая') color = status === 'Действующая' ? '#27AE60' : '#E74C3C';
+                    if (type === 'Нагнетательная') color = '#3498DB';
+                    if (type === 'Наблюдательная') color = '#95A5A6';
+                    
+                    return L.divIcon({
+                        html: `<div style="background:${color};width:12px;height:12px;border-radius:50%;border:2px solid white;"></div>`,
+                        className: '',
+                        iconSize: [12, 12]
+                    });
+                };
+                
+                const layer = L.geoJSON(data, {
+                    pointToLayer: (feature, latlng) => {
+                        return L.marker(latlng, {
+                            icon: getIcon(feature.properties.type, feature.properties.status)
+                        });
+                    },
+                    onEachFeature: (feature, layer) => {
+                        const p = feature.properties;
+                        let info = `<b>Скважина ${p.well_number}</b><br>
+                                   Тип: ${p.type}<br>
+                                   Статус: ${p.status}<br>
+                                   Глубина: ${p.depth} м<br>`;
+                        if (p.production_rate) info += `Дебит: ${p.production_rate} т/сут<br>`;
+                        if (p.injection_rate) info += `Приёмистость: ${p.injection_rate} м³/сут<br>`;
+                        layer.bindPopup(info);
+                    }
+                }).addTo(map);
+                overlays['🔴 Скважины'] = layer;
+            });
+        
+        // 6. Разломы
+        fetch('faults.geojson')
+            .then(r => r.json())
+            .then(data => {
+                const layer = L.geoJSON(data, {
+                    style: () => ({
+                        color: '#8B4513',
+                        weight: 3,
+                        dashArray: '10, 5'
+                    }),
+                    onEachFeature: (feature, layer) => {
+                        const p = feature.properties;
+                        layer.bindPopup(`<b>${p.fault_name}</b><br>
+                                        Тип: ${p.type}<br>
+                                        Амплитуда: ${p.amplitude_m} м`);
+                    }
+                }).addTo(map);
+                overlays['⚡ Тектонические нарушения'] = layer;
+            });
+        
+        // Добавление контроля слоёв через 1 секунду (чтобы все слои загрузились)
+        setTimeout(() => {
+            L.control.layers(null, overlays, { collapsed: false }).addTo(map);
+        }, 1000);
+    </script>
+</body>
+</html>

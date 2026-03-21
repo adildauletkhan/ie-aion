@@ -1,0 +1,40 @@
+# Frontend (not needed for backend)
+node_modules/
+src/
+public/
+dist/
+index.html
+vite.config.ts
+tsconfig*.json
+eslint.config.js
+package.json
+package-lock.json
+nginx.conf
+Dockerfile.frontend
+railway.frontend.toml
+
+# IDEs
+.vscode/
+.idea/
+
+# OS
+.DS_Store
+
+# Git
+.git/
+
+# Environment files
+.env
+.env.local
+.env.production.example
+
+# Python cache
+__pycache__/
+*.py[cod]
+.pytest_cache/
+htmlcov/
+
+# Temporary
+tmp/
+temp/
+*.log

@@ -1,0 +1,9 @@
+{
+  "type": "FeatureCollection",
+  "name": "Тектонические нарушения",
+  "features": [
+    {"type": "Feature", "properties": {"fault_name": "Разлом №1 (Северный)", "type": "Сброс", "amplitude_m": 15, "dip_angle": 65}, "geometry": {"type": "LineString", "coordinates": [[51.745, 43.875], [51.765, 43.878], [51.785, 43.880], [51.810, 43.882], [51.835, 43.880], [51.860, 43.875], [51.880, 43.868]]}},
+    {"type": "Feature", "properties": {"fault_name": "Разлом №2 (Южный)", "type": "Сброс", "amplitude_m": 12, "dip_angle": 58}, "geometry": {"type": "LineString", "coordinates": [[51.750, 43.800], [51.775, 43.802], [51.800, 43.805], [51.825, 43.806], [51.850, 43.803], [51.870, 43.798]]}},
+    {"type": "Feature", "properties": {"fault_name": "Разлом №3 (Диагональный)", "type": "Взброс", "amplitude_m": 8, "dip_angle": 72}, "geometry": {"type": "LineString", "coordinates": [[51.768, 43.880], [51.785, 43.865], [51.802, 43.850], [51.820, 43.835], [51.838, 43.820], [51.855, 43.805]]}}
+  ]
+}

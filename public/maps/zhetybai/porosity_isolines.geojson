@@ -1,0 +1,11 @@
+{
+  "type": "FeatureCollection",
+  "name": "Изолинии пористости пласта T1-A",
+  "features": [
+    {"type": "Feature", "properties": {"parameter": "porosity", "value": 18, "unit": "%", "color": "#E0E0E0"}, "geometry": {"type": "LineString", "coordinates": [[51.750, 43.872], [51.765, 43.875], [51.785, 43.878], [51.810, 43.880], [51.835, 43.878], [51.860, 43.872], [51.870, 43.865]]}},
+    {"type": "Feature", "properties": {"parameter": "porosity", "value": 20, "unit": "%", "color": "#ADD8E6"}, "geometry": {"type": "LineString", "coordinates": [[51.760, 43.860], [51.780, 43.863], [51.805, 43.866], [51.830, 43.865], [51.850, 43.860], [51.865, 43.852]]}},
+    {"type": "Feature", "properties": {"parameter": "porosity", "value": 22, "unit": "%", "color": "#4682B4"}, "geometry": {"type": "LineString", "coordinates": [[51.772, 43.845], [51.795, 43.848], [51.818, 43.850], [51.840, 43.847], [51.857, 43.840]]}},
+    {"type": "Feature", "properties": {"parameter": "porosity", "value": 24, "unit": "%", "color": "#1E90FF"}, "geometry": {"type": "LineString", "coordinates": [[51.785, 43.832], [51.805, 43.835], [51.825, 43.835], [51.842, 43.830]]}},
+    {"type": "Feature", "properties": {"parameter": "porosity", "value": 26, "unit": "%", "color": "#0000CD", "note": "Максимальная пористость"}, "geometry": {"type": "LineString", "coordinates": [[51.798, 43.822], [51.812, 43.824], [51.828, 43.823]]}}
+  ]
+}
