@@ -8,6 +8,7 @@ import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/component
 import { Play, Plus, Trash2, GitCompare, CheckCircle2, Clock, Loader2, Save, ChevronDown } from "lucide-react";
 import type { StageInput } from "@/lib/digitalTwinApi";
 import { useLanguage } from "@/hooks/useLanguage";
+import { useCompanyProfile } from "@/context/CompanyProfileContext";
 import { getAuthHeader } from "@/lib/auth";
 
 interface Scenario {
@@ -27,11 +28,18 @@ interface Scenario {
   stages?: StageInput[];
 }
 
-const defaultStages: StageInput[] = [
+const defaultStagesUpstream: StageInput[] = [
   { stage: "UP", label: "Добыча (Upstream)", capacity: 12000, planCorp: 5500, planGov: 4800 },
   { stage: "MID", label: "Транспорт (Midstream)", capacity: 9500, planCorp: 4200, planGov: 4600 },
   { stage: "DOWN", label: "Переработка (Downstream)", capacity: 8000, planCorp: 3800, planGov: 4500 },
   { stage: "EXPORT", label: "Экспорт (Crude)", capacity: 6000, planCorp: 3000, planGov: 3000 },
+];
+
+const defaultStagesEnergy: StageInput[] = [
+  { stage: "GEN",  label: "Генерация (ГРЭС/ТЭЦ/ГЭС/ВИЭ)", capacity: 22200, planCorp: 8400, planGov: 6320 },
+  { stage: "TRAN", label: "Передача НЭС (500–220 кВ)", capacity: 18500, planCorp: 7200, planGov: 5800 },
+  { stage: "DIST", label: "Распределение (110–35 кВ)", capacity: 16000, planCorp: 6500, planGov: 5200 },
+  { stage: "CONS", label: "Потребление (ЕЭС РК)", capacity: 14520, planCorp: 6100, planGov: 4800 },
 ];
 
 function getApiBase(): string {
@@ -41,6 +49,9 @@ function getApiBase(): string {
 
 export default function Scenarios() {
   const { t, translateData } = useLanguage();
+  const { getIndustryPack } = useCompanyProfile();
+  const isEnergy = getIndustryPack().id === "energy";
+  const defaultStages = isEnergy ? defaultStagesEnergy : defaultStagesUpstream;
   const [scenarios, setScenarios] = useState<Scenario[]>([]);
   const [comparing, setComparing] = useState<string[]>([]);
   const [loadingIds, setLoadingIds] = useState<string[]>([]);
@@ -373,7 +384,9 @@ export default function Scenarios() {
                         />
                       </div>
                       <div className="space-y-1">
-                        <label className="text-xs text-muted-foreground">KZ Oil Price</label>
+                        <label className="text-xs text-muted-foreground">
+                          {isEnergy ? "Тариф электроэнергии, ₸/кВт·ч" : "KZ Oil Price"}
+                        </label>
                         <Input
                           type="number"
                           value={s.oilPriceKz}
@@ -381,7 +394,9 @@ export default function Scenarios() {
                         />
                       </div>
                       <div className="space-y-1">
-                        <label className="text-xs text-muted-foreground">Brent</label>
+                        <label className="text-xs text-muted-foreground">
+                          {isEnergy ? "Цена мощности БРЭ, ₸/МВт·ч" : "Brent"}
+                        </label>
                         <Input
                           type="number"
                           value={s.brentPrice}
@@ -389,7 +404,9 @@ export default function Scenarios() {
                         />
                       </div>
                       <div className="space-y-1">
-                        <label className="text-xs text-muted-foreground">KZT Inflation</label>
+                        <label className="text-xs text-muted-foreground">
+                          {isEnergy ? "Инфляция, %" : "KZT Inflation"}
+                        </label>
                         <Input
                           type="number"
                           value={s.kztInflation}
@@ -572,12 +589,17 @@ export default function Scenarios() {
                     })}
                   </tr>
                   {/* Economic params */}
-                  {[
+                  {(isEnergy ? [
+                    { label: "USD/KZT", key: "usdKzt" as const },
+                    { label: "Тариф ₸/кВт·ч", key: "oilPriceKz" as const },
+                    { label: "Цена мощности БРЭ", key: "brentPrice" as const },
+                    { label: "Инфляция %", key: "kztInflation" as const },
+                  ] : [
                     { label: "USD/KZT", key: "usdKzt" as const },
                     { label: "Brent ($/bbl)", key: "brentPrice" as const },
                     { label: "KZ Oil Price", key: "oilPriceKz" as const },
                     { label: "KZT Inflation %", key: "kztInflation" as const },
-                  ].map(({ label, key }) => (
+                  ]).map(({ label, key }) => (
                     <tr key={key} className="border-b border-border/50">
                       <td className="py-2 px-3 text-muted-foreground text-xs">{label}</td>
                       {comparedScenarios.map((s) => (

@@ -6,7 +6,7 @@ type Dictionary = Record<string, string>;
 
 const translations: Record<Language, Dictionary> = {
   ru: {
-    appTitle: "Integrated Enterprise",
+    appTitle: "IE:AION",
     navDigitalTwinHome: "AI ассистент",
     navGeology: "Геология",
     navModels: "Модели",
@@ -1144,7 +1144,7 @@ const translations: Record<Language, Dictionary> = {
     backAllocationCollapseLayers: "Скрыть пласты",
   },
   en: {
-    appTitle: "Integrated Enterprise",
+    appTitle: "IE:AION",
     navDigitalTwinHome: "AI Assistant",
     navGeology: "Geology",
     navModels: "Models",

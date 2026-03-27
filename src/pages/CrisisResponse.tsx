@@ -44,8 +44,9 @@ import {
 import { useToast } from "@/hooks/use-toast";
 import { useCrisisWebSocket } from "@/hooks/useCrisisWebSocket";
 import { useLanguage } from "@/hooks/useLanguage";
+import { useCompanyProfile } from "@/context/CompanyProfileContext";
 import { getAuthHeader } from "@/lib/auth";
-import { CRISIS_ASSET_TYPES } from "@/lib/assetTypes";
+import { CRISIS_ASSET_TYPES_UPSTREAM, CRISIS_ASSET_TYPES_ENERGY } from "@/lib/assetTypes";
 import {
   analyzeCrisisEvent,
   createCrisisEvent,
@@ -96,6 +97,10 @@ export default function CrisisResponse() {
   const { t, translateData, language } = useLanguage();
   const { toast } = useToast();
   const queryClient = useQueryClient();
+  const { getIndustryPack } = useCompanyProfile();
+  const isEnergy = getIndustryPack().id === "energy";
+  const CRISIS_ASSET_TYPES = isEnergy ? CRISIS_ASSET_TYPES_ENERGY : CRISIS_ASSET_TYPES_UPSTREAM;
+
   const [selectedEventId, setSelectedEventId] = useState<string>("");
   const [expandedEventId, setExpandedEventId] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<string>("impact");
@@ -104,18 +109,17 @@ export default function CrisisResponse() {
     severity: "critical",
     title: "",
     description: "",
-    affectedStage: "DOWN",
-    affectedAssetType: "processing_plant",
+    affectedStage: isEnergy ? "TRANSMISSION" : "DOWN",
+    affectedAssetType: isEnergy ? "substation_500" : "processing_plant",
     affectedAssetId: "",
-    currentCapacity: "1200",
+    currentCapacity: isEnergy ? "2400" : "1200",
     impactedCapacity: "0",
-    estimatedDowntimeMinDays: "30",
-    estimatedDowntimeBestDays: "75",
-    estimatedDowntimeMaxDays: "90",
+    estimatedDowntimeMinDays: isEnergy ? "1" : "30",
+    estimatedDowntimeBestDays: isEnergy ? "7" : "75",
+    estimatedDowntimeMaxDays: isEnergy ? "14" : "90",
   });
-  // Те же типы активов, что в основных данных: по типу подгружаем названия активов для выбора
   const masterDataQueries = useQuery({
-    queryKey: ["crisis-master-data"],
+    queryKey: ["crisis-master-data", isEnergy],
     queryFn: async () => {
       const authHeader = getAuthHeader();
       const getList = async (key: string) => {
@@ -455,21 +459,29 @@ export default function CrisisResponse() {
     critical: "crisisSeverityCritical",
     catastrophic: "crisisSeverityCatastrophic",
   };
-  const stageLabelKeys: Record<string, string> = {
+  const stageLabelKeysUpstream: Record<string, string> = {
     UP: "crisisStageUp",
     MID: "crisisStageMid",
     DOWN: "crisisStageDown",
     EXPORT: "crisisStageExport",
   };
+  const stageLabelKeysEnergy: Record<string, string> = {
+    GENERATION: "Генерация",
+    TRANSMISSION: "Передача НЭС",
+    DISTRIBUTION: "Распределение",
+    CONSUMPTION: "Потребление",
+  };
+  const stageLabelKeys = isEnergy ? stageLabelKeysEnergy : stageLabelKeysUpstream;
+
   const eventTypeLabels: Record<string, string> = Object.fromEntries(
     Object.entries(eventTypeLabelKeys).map(([k, key]) => [k, t(key)])
   );
   const severityLabels: Record<string, string> = Object.fromEntries(
     Object.entries(severityLabelKeys).map(([k, key]) => [k, t(key)])
   );
-  const stageLabels: Record<string, string> = Object.fromEntries(
-    Object.entries(stageLabelKeys).map(([k, key]) => [k, t(key)])
-  );
+  const stageLabels: Record<string, string> = isEnergy
+    ? { ...stageLabelKeysEnergy }
+    : Object.fromEntries(Object.entries(stageLabelKeysUpstream).map(([k, key]) => [k, t(key)]));
 
   const eventTypeIcons: Record<string, ComponentType<{ className?: string }>> = {
     technical: Wrench,
@@ -484,12 +496,9 @@ export default function CrisisResponse() {
     critical: AlertTriangle,
     catastrophic: AlertOctagon,
   };
-  const stageIcons: Record<string, ComponentType<{ className?: string }>> = {
-    UP: Mountain,
-    MID: Truck,
-    DOWN: Factory,
-    EXPORT: Ship,
-  };
+  const stageIcons: Record<string, ComponentType<{ className?: string }>> = isEnergy
+    ? { GENERATION: Factory, TRANSMISSION: Activity, DISTRIBUTION: Truck, CONSUMPTION: Mountain }
+    : { UP: Mountain, MID: Truck, DOWN: Factory, EXPORT: Ship };
 
   const passportStatusOptions: { value: CrisisEvent["status"]; labelKey: string }[] = [
     { value: "open", labelKey: "crisisStatusDraft" },
@@ -804,10 +813,21 @@ export default function CrisisResponse() {
                   value={formState.affectedStage}
                   onChange={(e) => setFormState((prev) => ({ ...prev, affectedStage: e.target.value }))}
                 >
-                  <option value="UP">{t("crisisStageOptionUp")}</option>
-                  <option value="MID">{t("crisisStageOptionMid")}</option>
-                  <option value="DOWN">{t("crisisStageOptionDown")}</option>
-                  <option value="EXPORT">{t("crisisStageOptionExport")}</option>
+                  {isEnergy ? (
+                    <>
+                      <option value="GENERATION">Генерация</option>
+                      <option value="TRANSMISSION">Передача НЭС (500–220 кВ)</option>
+                      <option value="DISTRIBUTION">Распределение (110–35 кВ)</option>
+                      <option value="CONSUMPTION">Потребление</option>
+                    </>
+                  ) : (
+                    <>
+                      <option value="UP">{t("crisisStageOptionUp")}</option>
+                      <option value="MID">{t("crisisStageOptionMid")}</option>
+                      <option value="DOWN">{t("crisisStageOptionDown")}</option>
+                      <option value="EXPORT">{t("crisisStageOptionExport")}</option>
+                    </>
+                  )}
                 </select>
               </div>
               <div className="space-y-1">
@@ -861,7 +881,9 @@ export default function CrisisResponse() {
                 </div>
               )}
               <div className="space-y-1">
-                <label className="text-xs text-muted-foreground">{t("crisisLabelCurrentCapacity")}</label>
+                <label className="text-xs text-muted-foreground">
+                  {isEnergy ? "Номинальная мощность, МВт" : t("crisisLabelCurrentCapacity")}
+                </label>
                 <Input
                   type="number"
                   value={formState.currentCapacity}
@@ -869,7 +891,9 @@ export default function CrisisResponse() {
                 />
               </div>
               <div className="space-y-1">
-                <label className="text-xs text-muted-foreground">{t("crisisLabelImpactedCapacity")}</label>
+                <label className="text-xs text-muted-foreground">
+                  {isEnergy ? "Мощность после аварии, МВт" : t("crisisLabelImpactedCapacity")}
+                </label>
                 <Input
                   type="number"
                   value={formState.impactedCapacity}
@@ -877,7 +901,9 @@ export default function CrisisResponse() {
                 />
               </div>
               <div className="space-y-1">
-                <label className="text-xs text-muted-foreground">{t("crisisLabelDowntimeMin")}</label>
+                <label className="text-xs text-muted-foreground">
+                  {isEnergy ? "Мин. время восстановления, дн." : t("crisisLabelDowntimeMin")}
+                </label>
                 <Input
                   type="number"
                   value={formState.estimatedDowntimeMinDays}
@@ -885,7 +911,9 @@ export default function CrisisResponse() {
                 />
               </div>
               <div className="space-y-1">
-                <label className="text-xs text-muted-foreground">{t("crisisLabelDowntimeBest")}</label>
+                <label className="text-xs text-muted-foreground">
+                  {isEnergy ? "Ожид. время восстановления, дн." : t("crisisLabelDowntimeBest")}
+                </label>
                 <Input
                   type="number"
                   value={formState.estimatedDowntimeBestDays}
@@ -893,7 +921,9 @@ export default function CrisisResponse() {
                 />
               </div>
               <div className="space-y-1">
-                <label className="text-xs text-muted-foreground">{t("crisisLabelDowntimeMax")}</label>
+                <label className="text-xs text-muted-foreground">
+                  {isEnergy ? "Макс. время восстановления, дн." : t("crisisLabelDowntimeMax")}
+                </label>
                 <Input
                   type="number"
                   value={formState.estimatedDowntimeMaxDays}
@@ -970,17 +1000,23 @@ export default function CrisisResponse() {
 
                   <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
                     <div className="rounded-md border p-3">
-                      <div className="text-xs text-muted-foreground">{t("crisisSurplusUpstream")}</div>
+                      <div className="text-xs text-muted-foreground">
+                        {isEnergy ? "Потеря генерации, МВт" : t("crisisSurplusUpstream")}
+                      </div>
                       <div className="text-sm font-medium">{impactQuery.data.upstreamImpact?.surplus ?? "—"}</div>
                     </div>
                     <div className="rounded-md border p-3">
-                      <div className="text-xs text-muted-foreground">{t("crisisDropMidstream")}</div>
+                      <div className="text-xs text-muted-foreground">
+                        {isEnergy ? "Снижение транзита, %" : t("crisisDropMidstream")}
+                      </div>
                       <div className="text-sm font-medium">
                         {impactQuery.data.midstreamImpact?.utilization_drop ?? "—"}%
                       </div>
                     </div>
                     <div className="rounded-md border p-3">
-                      <div className="text-xs text-muted-foreground">{t("crisisDeficitDownstream")}</div>
+                      <div className="text-xs text-muted-foreground">
+                        {isEnergy ? "Дефицит потребления, МВт" : t("crisisDeficitDownstream")}
+                      </div>
                       <div className="text-sm font-medium">{impactQuery.data.downstreamImpact?.deficit ?? "—"}</div>
                     </div>
                   </div>
@@ -1232,7 +1268,9 @@ export default function CrisisResponse() {
                     <CardContent className="p-3 flex items-start gap-2">
                       <div className="rounded-full bg-primary/10 p-1.5 mt-0.5"><BarChart3 className="h-4 w-4 text-primary" /></div>
                       <div>
-                        <div className="text-[10px] uppercase tracking-wide text-muted-foreground">{language === "en" ? "Refinery load" : "Загрузка НПЗ"}</div>
+                        <div className="text-[10px] uppercase tracking-wide text-muted-foreground">
+                          {isEnergy ? "Загрузка сети" : (language === "en" ? "Refinery load" : "Загрузка НПЗ")}
+                        </div>
                         <div className="text-xl font-bold text-primary">{latest ? `${(utilization * 100).toFixed(0)}%` : "—"}</div>
                         <div className="w-full bg-muted rounded-full h-1.5 mt-1">
                           <div className="bg-primary h-1.5 rounded-full" style={{ width: `${utilization * 100}%` }} />
@@ -1244,7 +1282,9 @@ export default function CrisisResponse() {
                     <CardContent className="p-3 flex items-start gap-2">
                       <div className="rounded-full bg-success/10 p-1.5 mt-0.5"><TrendingUp className="h-4 w-4 text-success" /></div>
                       <div>
-                        <div className="text-[10px] uppercase tracking-wide text-muted-foreground">{language === "en" ? "Export volumes" : "Объёмы экспорта"}</div>
+                        <div className="text-[10px] uppercase tracking-wide text-muted-foreground">
+                          {isEnergy ? "Резерв мощности" : (language === "en" ? "Export volumes" : "Объёмы экспорта")}
+                        </div>
                         <div className="text-xl font-bold text-success">{latest ? `${(exportVol * 100).toFixed(0)}%` : "—"}</div>
                         <div className="w-full bg-muted rounded-full h-1.5 mt-1">
                           <div className="bg-success h-1.5 rounded-full" style={{ width: `${exportVol * 100}%` }} />
@@ -1335,13 +1375,13 @@ export default function CrisisResponse() {
                       <p className="text-xs font-medium text-primary">{language === "en" ? "New monitoring entry" : "Новая запись мониторинга"}</p>
                       <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
                         <div>
-                          <label className="text-[10px] text-muted-foreground block mb-0.5">{language === "en" ? "Refinery utilization (0–1)" : "Загрузка НПЗ (0–1)"}</label>
+                          <label className="text-[10px] text-muted-foreground block mb-0.5">{isEnergy ? "Загрузка сети (0–1)" : (language === "en" ? "Refinery utilization (0–1)" : "Загрузка НПЗ (0–1)")}</label>
                           <Input type="number" step="0.01" min={0} max={1} className="h-7 text-xs" placeholder="0.83"
                             value={monitoringForm.utilizationRefineries ?? ""}
                             onChange={e => setMonitoringForm(f => ({ ...f, utilizationRefineries: e.target.value ? Number(e.target.value) : undefined }))} />
                         </div>
                         <div>
-                          <label className="text-[10px] text-muted-foreground block mb-0.5">{language === "en" ? "Export volumes (0–1)" : "Объёмы экспорта (0–1)"}</label>
+                          <label className="text-[10px] text-muted-foreground block mb-0.5">{isEnergy ? "Резерв мощности (0–1)" : (language === "en" ? "Export volumes (0–1)" : "Объёмы экспорта (0–1)")}</label>
                           <Input type="number" step="0.01" min={0} max={1} className="h-7 text-xs" placeholder="0.92"
                             value={monitoringForm.exportVolumes ?? ""}
                             onChange={e => setMonitoringForm(f => ({ ...f, exportVolumes: e.target.value ? Number(e.target.value) : undefined }))} />
@@ -1404,8 +1444,8 @@ export default function CrisisResponse() {
                         <thead>
                           <tr className="border-t border-b bg-muted/40">
                             <th className="text-left px-4 py-2 font-medium text-muted-foreground">{language === "en" ? "Date" : "Дата"}</th>
-                            <th className="text-left px-4 py-2 font-medium text-muted-foreground">{language === "en" ? "Refinery" : "НПЗ"}</th>
-                            <th className="text-left px-4 py-2 font-medium text-muted-foreground">{language === "en" ? "Export" : "Экспорт"}</th>
+                            <th className="text-left px-4 py-2 font-medium text-muted-foreground">{isEnergy ? "Загрузка" : (language === "en" ? "Refinery" : "НПЗ")}</th>
+                            <th className="text-left px-4 py-2 font-medium text-muted-foreground">{isEnergy ? "Резерв" : (language === "en" ? "Export" : "Экспорт")}</th>
                             <th className="text-left px-4 py-2 font-medium text-muted-foreground">{language === "en" ? "Planned $" : "План $"}</th>
                             <th className="text-left px-4 py-2 font-medium text-muted-foreground">{language === "en" ? "Actual $" : "Факт $"}</th>
                             <th className="text-left px-4 py-2 font-medium text-muted-foreground">{language === "en" ? "Variance" : "Откл."}</th>

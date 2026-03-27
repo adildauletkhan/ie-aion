@@ -54,7 +54,21 @@ export function WorkspaceSwitcher() {
                 {ws.shortName ?? ws.name}
               </span>
               <span className="text-xs text-muted-foreground truncate">
-                {ws.workspaceScope === "all" ? "Полный доступ" : "Собственные активы"}
+                {ws.workspaceScope === "all"
+                  ? ws.code === "KEGOC"      ? "Системный оператор · НЭС"
+                  : ws.code === "KAZGMK"     ? "Головная компания · ГМК"
+                  : ws.code === "KTO"        ? "Нефтепроводы · КМГ Группа"
+                  : ws.code === "QAZAQGAS"   ? "Газопроводы · Самрук-Казына"
+                  : "Полный доступ"
+                  : ws.code === "ENERGOINFORM" ? "ИТК · 100% ДЗО"
+                  : ws.code === "BATYS"        ? "ЛЭП 500кВ · 20% ДЗО"
+                  : ws.code === "ZHEZKAZGAN"   ? "Медь · 100% ДЗО"
+                  : ws.code === "SOKOLOV"      ? "Железная руда · 100% ДЗО"
+                  : ws.code === "KTO_WEST"     ? "Зап. нефтепроводы · филиал"
+                  : ws.code === "KTO_AKTAU"    ? "Мор. терминал Актау"
+                  : ws.code === "ICA"          ? "Транзит газа · ДЗО"
+                  : ws.code === "KTGAIMAK"     ? "Газораспределение · ДЗО"
+                  : "Собственные активы"}
               </span>
             </div>
             {activeWorkspace?.id === ws.id && (

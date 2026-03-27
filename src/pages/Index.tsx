@@ -9,6 +9,11 @@ import { KpiCard } from "@/components/home/KpiCard";
 import { AiAssistant } from "@/components/home/AiAssistant";
 import { CommandShortcuts } from "@/components/home/CommandShortcuts";
 import { ScenarioRunModal } from "@/components/home/ScenarioRunModal";
+import { EnergyDashboard } from "@/components/home/EnergyDashboard";
+import { MiningDashboard } from "@/components/home/MiningDashboard";
+import { OilPipelineDashboard } from "@/components/home/OilPipelineDashboard";
+import { GasPipelineDashboard } from "@/components/home/GasPipelineDashboard";
+import { useCompanyProfile } from "@/context/CompanyProfileContext";
 
 /* ─── types ─────────────────────────────────────────────────────────────── */
 
@@ -184,6 +189,12 @@ function getApiBase() {
 /* ─── component ──────────────────────────────────────────────────────────── */
 
 const Index = () => {
+  const { profile } = useCompanyProfile();
+  if (profile.industry === 'energy')       return <EnergyDashboard />;
+  if (profile.industry === 'mining')       return <MiningDashboard />;
+  if (profile.industry === 'pipeline_oil') return <OilPipelineDashboard />;
+  if (profile.industry === 'pipeline_gas') return <GasPipelineDashboard />;
+
   const { t } = useLanguage();
   const { theme } = useTheme();
   const isDark = theme === "dark";
@@ -390,7 +401,7 @@ const Index = () => {
                 WebkitTextFillColor: "transparent",
               }}
             >
-              INTEGRATED ENTERPRISE
+              IE:AION
             </h1>
             <p
               className="text-xs mt-1"

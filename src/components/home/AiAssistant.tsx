@@ -43,6 +43,8 @@ interface AiAssistantProps {
   onRunScenario: () => void;
   t: (key: string) => string;
   animDelay?: number;
+  /** When true, renders in a tall vertical column layout (no left sidebar) */
+  vertical?: boolean;
 }
 
 type VoiceLang = "ru" | "en" | "kk";
@@ -206,7 +208,7 @@ function useVoiceRecorder(onResult: (text: string) => void) {
   return { isRecording, isTranscribing, elapsed, start, stop, cancel };
 }
 
-function AvatarIdle({ isDark, isSpeaking, isRecording = false }: { isDark: boolean; isSpeaking: boolean; isRecording?: boolean }) {
+function AvatarIdle({ isDark, isSpeaking, isRecording = false, compact = false }: { isDark: boolean; isSpeaking: boolean; isRecording?: boolean; compact?: boolean }) {
   const tiffany = isDark ? "#5CE0D6" : "#0D9488";
   const yellow = isDark ? "#FACC15" : "#CA8A04";
   const blue = isDark ? "#60A5FA" : "#2563EB";
@@ -218,14 +220,22 @@ function AvatarIdle({ isDark, isSpeaking, isRecording = false }: { isDark: boole
   const borderColor = isRecording ? red : tiffany;
 
   const DATA_NODES = [
-    { label: "198K", sub: "bpd", x: -68, y: -28, color: yellow, delay: 0 },
-    { label: "847", sub: "wells", x: 64, y: -36, color: blue, delay: 0.4 },
-    { label: "94%", sub: "load", x: 72, y: 32, color: orange, delay: 0.8 },
-    { label: "12", sub: "assets", x: -72, y: 38, color: green, delay: 1.2 },
+    { label: "198K", sub: "bpd",    x: -68, y: -28, color: yellow, delay: 0   },
+    { label: "847",  sub: "wells",  x:  64, y: -36, color: blue,   delay: 0.4 },
+    { label: "94%",  sub: "load",   x:  72, y:  32, color: orange, delay: 0.8 },
+    { label: "12",   sub: "assets", x: -72, y:  38, color: green,  delay: 1.2 },
   ];
 
   return (
-    <div className="flex flex-col items-center justify-center gap-2 py-2">
+    <div
+      className="flex flex-col items-center justify-center gap-1"
+      style={{
+        transform: compact ? "scale(0.65)" : "scale(1)",
+        transformOrigin: "top center",
+        height: compact ? 140 : "auto",
+        overflow: "hidden",
+      }}
+    >
       <div
         className="relative flex items-center justify-center"
         style={{ width: 200, height: 180 }}
@@ -530,6 +540,7 @@ export function AiAssistant({
   onRunScenario,
   t,
   animDelay = 0,
+  vertical = false,
 }: AiAssistantProps) {
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const { theme } = useTheme();
@@ -602,6 +613,269 @@ export function AiAssistant({
     ? { background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.08)", color: "rgba(255,255,255,0.28)" }
     : { background: "rgba(0,0,0,0.02)", border: "1px solid rgba(0,0,0,0.08)", color: "rgba(15,23,42,0.30)" };
 
+  /* ── Shared sub-components ──────────────────────────────────────────── */
+
+  const messagesBlock = (maxH: string) => (
+    <div
+      className="overflow-y-auto p-4 space-y-3"
+      style={{ maxHeight: maxH, minHeight: 120 }}
+    >
+      {messages.length === 0 ? (
+        <div className="flex items-center justify-center py-4" style={{ animation: "fade-slide-up 0.5s ease-out both" }}>
+          <AvatarIdle isDark={isDark} isSpeaking={isSpeaking} isRecording={isRecording} />
+        </div>
+      ) : (
+        messages.map((msg, i) => (
+          <div key={i} className={`flex ${msg.role === "user" ? "justify-end" : "justify-start"}`}>
+            <div className={`flex gap-2 ${msg.role === "user" ? "flex-row-reverse" : "flex-row"} max-w-[92%]`}>
+              {msg.role === "assistant" && (
+                <div className="w-7 h-7 rounded-full overflow-hidden shrink-0 mt-0.5"
+                  style={{ border: `1px solid ${tiffany}60` }}>
+                  <img src="/ai-assistant-avatar.png" alt="AI" className="w-full h-full object-cover object-top" />
+                </div>
+              )}
+              <div>
+                <div className="rounded-xl px-4 py-2.5 text-sm whitespace-pre-line"
+                  style={msg.role === "user" ? userMsgStyle : asMsgStyle}>
+                  <div className="text-[9px] uppercase tracking-widest mb-1 font-semibold"
+                    style={{ color: msg.role === "user" ? userLabelColor : asLabelColor }}>
+                    {msg.role === "user" ? t("chatUser") : "AIgul"}
+                  </div>
+                  {msg.text}
+                </div>
+                {msg.role === "assistant" && (
+                  <button onClick={() => handleSpeak(msg.text)}
+                    className="mt-1 flex items-center gap-1 text-[10px] font-medium transition-colors duration-200"
+                    style={{ color: isSpeaking ? "#FB923C" : `${tiffany}99` }}
+                    onMouseEnter={(e) => (e.currentTarget.style.color = isSpeaking ? "#FB923C" : tiffany)}
+                    onMouseLeave={(e) => (e.currentTarget.style.color = isSpeaking ? "#FB923C" : `${tiffany}99`)}>
+                    {isSpeaking
+                      ? <><VolumeX className="h-3 w-3" /> {t("aiStopSpeech")}</>
+                      : <><Volume2 className="h-3 w-3" /> {t("aiReadAloud")}</>}
+                  </button>
+                )}
+              </div>
+            </div>
+          </div>
+        ))
+      )}
+      <div ref={messagesEndRef} />
+    </div>
+  );
+
+  const sourcesBlock = (
+    <div className="px-4 pb-3">
+      <p className="text-[10px] uppercase tracking-[0.15em] mb-2 font-semibold" style={{ color: labelColor }}>
+        {t("ragSources")}
+      </p>
+      <div className="flex flex-wrap gap-1.5">
+        {SOURCE_ITEMS.map(({ key, labelKey }) => {
+          const active = sources[key];
+          return (
+            <button key={key} onClick={() => onSourceChange(key, !active)}
+              className="px-2.5 py-1 rounded-full text-[11px] font-medium transition-all duration-200"
+              style={active ? chipActive : chipInactive}>
+              {t(labelKey)}
+            </button>
+          );
+        })}
+      </div>
+    </div>
+  );
+
+  const inputBlock = (
+    <div className="p-4 border-t space-y-2" style={{ borderColor: dividerColor }}>
+      {isRecording ? (
+        <div className="flex items-center gap-3 rounded-lg px-4 py-3"
+          style={{ background: isDark ? "rgba(239,68,68,0.08)" : "rgba(239,68,68,0.05)", border: "1px solid rgba(239,68,68,0.25)" }}>
+          <div className="flex items-center gap-2 shrink-0">
+            <span className="w-3 h-3 rounded-full" style={{ background: "#EF4444", animation: "pulse 1s ease-in-out infinite", boxShadow: "0 0 8px rgba(239,68,68,0.6)" }} />
+            <span className="text-sm font-mono font-semibold tabular-nums" style={{ color: "#EF4444" }}>
+              {String(Math.floor(recSeconds / 60)).padStart(2, "0")}:{String(recSeconds % 60).padStart(2, "0")}
+            </span>
+          </div>
+          <div className="flex items-end gap-[2px] h-6 flex-1 justify-center">
+            {Array.from({ length: 20 }, (_, i) => (
+              <div key={i} style={{ width: 3, borderRadius: 1.5, background: "#EF4444",
+                opacity: 0.4 + Math.random() * 0.4,
+                animation: `eq-bar ${0.3 + (i % 5) * 0.08}s ease-in-out ${i * 0.04}s infinite alternate` }} />
+            ))}
+          </div>
+          <button onClick={cancelMic}
+            className="flex items-center justify-center w-8 h-8 rounded-full transition-colors"
+            style={{ background: isDark ? "rgba(255,255,255,0.06)" : "rgba(0,0,0,0.05)", color: isDark ? "rgba(255,255,255,0.5)" : "rgba(0,0,0,0.4)" }}>
+            <X className="h-4 w-4" />
+          </button>
+          <button onClick={stopMic}
+            className="flex items-center gap-2 px-4 py-2 rounded-full text-sm font-semibold transition-all"
+            style={{ background: "#EF4444", color: "#fff", boxShadow: "0 2px 12px rgba(239,68,68,0.4)" }}>
+            <Square className="h-3.5 w-3.5" fill="#fff" />Stop
+          </button>
+        </div>
+      ) : isTranscribing ? (
+        <div className="flex items-center justify-center gap-3 rounded-lg px-4 py-4"
+          style={{ background: isDark ? "rgba(250,204,21,0.06)" : "rgba(250,204,21,0.04)", border: "1px solid rgba(250,204,21,0.2)" }}>
+          <span className="w-5 h-5 rounded-full border-2 border-yellow-400/30 border-t-yellow-400" style={{ animation: "spin 0.7s linear infinite" }} />
+          <span className="text-sm font-medium" style={{ color: "#FACC15" }}>Распознаю речь...</span>
+        </div>
+      ) : (
+        <div className="flex gap-2">
+          <textarea
+            value={question}
+            onChange={(e) => onQuestionChange(e.target.value)}
+            onKeyDown={handleKey}
+            rows={2}
+            className="flex-1 resize-none rounded-lg text-sm px-3 py-2 outline-none transition-all duration-200"
+            style={{ background: inputBg, border: `1px solid ${inputBorder}`, color: inputColor, caretColor: tiffany }}
+            onFocus={(e) => {
+              e.currentTarget.style.borderColor = isDark ? "rgba(92,224,214,0.40)" : "rgba(13,148,136,0.40)";
+              e.currentTarget.style.boxShadow = isDark ? "0 0 12px rgba(92,224,214,0.12)" : "0 0 10px rgba(13,148,136,0.08)";
+            }}
+            onBlur={(e) => { e.currentTarget.style.borderColor = inputBorder; e.currentTarget.style.boxShadow = "none"; }}
+            placeholder=""
+          />
+          <div className="flex flex-col gap-1">
+            <button onClick={startMic}
+              className="flex items-center justify-center rounded-lg px-3 py-2 transition-all"
+              style={{ background: isDark ? "rgba(255,255,255,0.06)" : "rgba(0,0,0,0.04)", border: `1px solid ${isDark ? "rgba(255,255,255,0.1)" : "rgba(0,0,0,0.08)"}`, color: isDark ? "rgba(255,255,255,0.5)" : "rgba(0,0,0,0.4)" }}>
+              <Mic className="h-4 w-4" />
+            </button>
+            <ShimmerButton onClick={onAsk} disabled={isChatLoading || !question.trim()} className="flex-1 px-3">
+              {isChatLoading
+                ? <span className="w-4 h-4 rounded-full border-2 border-white/30 border-t-white" style={{ animation: "spin 0.7s linear infinite" }} />
+                : <Send className="h-4 w-4" />}
+            </ShimmerButton>
+          </div>
+        </div>
+      )}
+      {!isRecording && !isTranscribing && (
+        <p className="text-[10px]" style={{ color: hintColor }}>{t("inputHint")}</p>
+      )}
+    </div>
+  );
+
+  /* ── Header (shared) ─────────────────────────────────────────────────── */
+  const headerBlock = (
+    <div className="flex items-center gap-3 px-4 py-3 border-b" style={{ borderColor: dividerColor }}>
+      <div className="w-9 h-9 rounded-full overflow-hidden shrink-0"
+        style={{ border: `1.5px solid ${tiffany}`, boxShadow: isSpeaking ? `0 0 10px ${tiffany}50` : "none" }}>
+        <img src="/ai-assistant-avatar.png" alt="AI" className="w-full h-full object-cover object-top" />
+      </div>
+      <div className="flex-1 min-w-0">
+        <h2 className="text-sm font-bold tracking-wide truncate"
+          style={{ background: isDark ? "linear-gradient(90deg, #5CE0D6, #FACC15)" : "linear-gradient(90deg, #0D9488, #CA8A04)", WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent" }}>
+          {t("aiAssistantName")}
+        </h2>
+        <p className="text-[10px] tracking-wider"
+          style={{ color: isDark ? "rgba(255,255,255,0.35)" : "rgba(15,23,42,0.40)" }}>
+          {t("aiAssistantSubtitle")}
+        </p>
+      </div>
+      <div className="flex items-center gap-1 px-2 py-1 rounded-md text-[11px] font-semibold"
+        style={{ background: isDark ? "rgba(92,224,214,0.08)" : "rgba(13,148,136,0.06)", border: `1px solid ${isDark ? "rgba(92,224,214,0.15)" : "rgba(13,148,136,0.12)"}`, color: isDark ? "rgba(92,224,214,0.6)" : "rgba(13,148,136,0.5)" }}>
+        <Globe className="h-3 w-3" />
+        {VOICE_LABELS[voiceLang]}
+      </div>
+      {messages.length > 0 && (
+        <button onClick={onClear}
+          className="flex items-center gap-1 text-[11px] transition-colors"
+          style={{ color: isDark ? "rgba(255,255,255,0.35)" : "rgba(15,23,42,0.40)" }}
+          onMouseEnter={(e) => (e.currentTarget.style.color = isDark ? "#FB7185" : "#E11D48")}
+          onMouseLeave={(e) => (e.currentTarget.style.color = isDark ? "rgba(255,255,255,0.35)" : "rgba(15,23,42,0.40)")}>
+          <Trash2 className="h-3 w-3" />
+        </button>
+      )}
+    </div>
+  );
+
+  /* ── VERTICAL layout ─────────────────────────────────────────────────── */
+  if (vertical) {
+    return (
+      <div
+        className="flex flex-col h-full rounded-xl overflow-hidden transition-colors duration-300"
+        style={{
+          background: panelBg,
+          backdropFilter: "blur(16px)",
+          border: `1px solid ${panelBorder}`,
+          animation: `fade-slide-up 0.6s ease-out ${animDelay}ms both`,
+        }}
+      >
+        {headerBlock}
+
+        {/* Messages — flex-1 fills all available space */}
+        <div className="flex-1 overflow-y-auto p-4 space-y-3">
+          {messages.length === 0 ? (
+            <div className="flex-1 flex items-center justify-center py-6" style={{ animation: "fade-slide-up 0.5s ease-out both" }}>
+              <AvatarIdle isDark={isDark} isSpeaking={isSpeaking} isRecording={isRecording} />
+            </div>
+          ) : (
+            messages.map((msg, i) => (
+              <div key={i} className={`flex ${msg.role === "user" ? "justify-end" : "justify-start"}`}>
+                <div className={`flex gap-2 ${msg.role === "user" ? "flex-row-reverse" : "flex-row"} max-w-[96%]`}>
+                  {msg.role === "assistant" && (
+                    <div className="w-7 h-7 rounded-full overflow-hidden shrink-0 mt-0.5"
+                      style={{ border: `1px solid ${tiffany}60` }}>
+                      <img src="/ai-assistant-avatar.png" alt="AI" className="w-full h-full object-cover object-top" />
+                    </div>
+                  )}
+                  <div>
+                    <div className="rounded-xl px-3 py-2 text-sm whitespace-pre-line"
+                      style={msg.role === "user" ? userMsgStyle : asMsgStyle}>
+                      <div className="text-[9px] uppercase tracking-widest mb-1 font-semibold"
+                        style={{ color: msg.role === "user" ? userLabelColor : asLabelColor }}>
+                        {msg.role === "user" ? t("chatUser") : "AIgul"}
+                      </div>
+                      {msg.text}
+                    </div>
+                    {msg.role === "assistant" && (
+                      <button onClick={() => handleSpeak(msg.text)}
+                        className="mt-1 flex items-center gap-1 text-[10px] font-medium transition-colors duration-200"
+                        style={{ color: isSpeaking ? "#FB923C" : `${tiffany}99` }}
+                        onMouseEnter={(e) => (e.currentTarget.style.color = isSpeaking ? "#FB923C" : tiffany)}
+                        onMouseLeave={(e) => (e.currentTarget.style.color = isSpeaking ? "#FB923C" : `${tiffany}99`)}>
+                        {isSpeaking
+                          ? <><VolumeX className="h-3 w-3" /> {t("aiStopSpeech")}</>
+                          : <><Volume2 className="h-3 w-3" /> {t("aiReadAloud")}</>}
+                      </button>
+                    )}
+                  </div>
+                </div>
+              </div>
+            ))
+          )}
+          <div ref={messagesEndRef} />
+        </div>
+
+        {/* Divider */}
+        <div className="border-t" style={{ borderColor: dividerColor }} />
+
+        {/* Sources — compact horizontal scroll */}
+        <div className="px-4 py-3" style={{ background: sidebarBg }}>
+          <p className="text-[10px] uppercase tracking-[0.15em] mb-2 font-semibold" style={{ color: labelColor }}>
+            {t("ragSources")}
+          </p>
+          <div className="flex flex-wrap gap-1.5">
+            {SOURCE_ITEMS.map(({ key, labelKey }) => {
+              const active = sources[key];
+              return (
+                <button key={key} onClick={() => onSourceChange(key, !active)}
+                  className="px-2 py-0.5 rounded-full text-[10px] font-medium transition-all duration-200"
+                  style={active ? chipActive : chipInactive}>
+                  {t(labelKey)}
+                </button>
+              );
+            })}
+          </div>
+        </div>
+
+        {inputBlock}
+
+        <style>{`@keyframes eq-bar { 0% { height: 3px; } 100% { height: 14px; } }`}</style>
+      </div>
+    );
+  }
+
+  /* ── HORIZONTAL layout (original) ────────────────────────────────────── */
   return (
     <div
       className="flex flex-col rounded-xl overflow-hidden transition-colors duration-300"
@@ -612,121 +886,25 @@ export function AiAssistant({
         animation: `fade-slide-up 0.6s ease-out ${animDelay}ms both`,
       }}
     >
-      {/* Header */}
-      <div
-        className="flex items-center gap-3 px-5 py-3 border-b"
-        style={{ borderColor: dividerColor }}
-      >
-        {/* Avatar mini */}
-        <div
-          className="w-9 h-9 rounded-full overflow-hidden shrink-0"
-          style={{
-            border: `1.5px solid ${tiffany}`,
-            boxShadow: isSpeaking ? `0 0 10px ${tiffany}50` : "none",
-          }}
-        >
-          <img
-            src="/ai-assistant-avatar.png"
-            alt="AI"
-            className="w-full h-full object-cover object-top"
-          />
-        </div>
-        <div className="flex-1 min-w-0">
-          <h2
-            className="text-sm font-bold tracking-wide truncate"
-            style={{
-              background: isDark
-                ? "linear-gradient(90deg, #5CE0D6, #FACC15)"
-                : "linear-gradient(90deg, #0D9488, #CA8A04)",
-              WebkitBackgroundClip: "text",
-              WebkitTextFillColor: "transparent",
-            }}
-          >
-            {t("aiAssistantName")}
-          </h2>
-          <p
-            className="text-[10px] tracking-wider"
-            style={{ color: isDark ? "rgba(255,255,255,0.35)" : "rgba(15,23,42,0.40)" }}
-          >
-            {t("aiAssistantSubtitle")}
-          </p>
-        </div>
-
-        {/* Auto-detected language badge */}
-        <div className="flex items-center gap-1 px-2 py-1 rounded-md text-[11px] font-semibold"
-          style={{
-            background: isDark ? "rgba(92,224,214,0.08)" : "rgba(13,148,136,0.06)",
-            border: `1px solid ${isDark ? "rgba(92,224,214,0.15)" : "rgba(13,148,136,0.12)"}`,
-            color: isDark ? "rgba(92,224,214,0.6)" : "rgba(13,148,136,0.5)",
-          }}>
-          <Globe className="h-3 w-3" />
-          {VOICE_LABELS[voiceLang]}
-        </div>
-
-        {messages.length > 0 && (
-          <button
-            onClick={onClear}
-            className="flex items-center gap-1 text-[11px] transition-colors"
-            style={{ color: isDark ? "rgba(255,255,255,0.35)" : "rgba(15,23,42,0.40)" }}
-            onMouseEnter={(e) => (e.currentTarget.style.color = isDark ? "#FB7185" : "#E11D48")}
-            onMouseLeave={(e) => (e.currentTarget.style.color = isDark ? "rgba(255,255,255,0.35)" : "rgba(15,23,42,0.40)")}
-          >
-            <Trash2 className="h-3 w-3" />
-          </button>
-        )}
-      </div>
+      {headerBlock}
 
       <div className="flex flex-col md:flex-row gap-0 flex-1">
         {/* Left: controls */}
-        <div
-          className="md:w-56 shrink-0 p-4 space-y-4 border-r"
-          style={{ borderColor: dividerColor, background: sidebarBg }}
-        >
+        <div className="md:w-56 shrink-0 p-4 space-y-4 border-r"
+          style={{ borderColor: dividerColor, background: sidebarBg }}>
           {/* Sources */}
-          <div>
-            <p
-              className="text-[10px] uppercase tracking-[0.15em] mb-2.5 font-semibold"
-              style={{ color: labelColor }}
-            >
-              {t("ragSources")}
-            </p>
-            <div className="flex flex-wrap gap-1.5">
-              {SOURCE_ITEMS.map(({ key, labelKey }) => {
-                const active = sources[key];
-                return (
-                  <button
-                    key={key}
-                    onClick={() => onSourceChange(key, !active)}
-                    className="px-2.5 py-1 rounded-full text-[11px] font-medium transition-all duration-200"
-                    style={active ? chipActive : chipInactive}
-                  >
-                    {t(labelKey)}
-                  </button>
-                );
-              })}
-            </div>
-          </div>
-
+          {sourcesBlock}
           {/* Scenario runner */}
           <div>
-            <p
-              className="text-[10px] uppercase tracking-[0.15em] mb-2.5 font-semibold"
-              style={{ color: labelColor }}
-            >
+            <p className="text-[10px] uppercase tracking-[0.15em] mb-2.5 font-semibold" style={{ color: labelColor }}>
               {t("ragScenarioRun")}
             </p>
             {selectedScenarioId && scenarios.length > 0 ? (
-              <div
-                className="rounded-lg px-3 py-2 mb-2 text-[11px] truncate"
-                style={scenarioPreviewStyle}
-              >
+              <div className="rounded-lg px-3 py-2 mb-2 text-[11px] truncate" style={scenarioPreviewStyle}>
                 {scenarios.find((s) => s.id === selectedScenarioId)?.name ?? "—"}
               </div>
             ) : (
-              <div
-                className="rounded-lg px-3 py-2 mb-2 text-[11px]"
-                style={scenarioEmptyStyle}
-              >
+              <div className="rounded-lg px-3 py-2 mb-2 text-[11px]" style={scenarioEmptyStyle}>
                 {t("scenarioNotSelected")}
               </div>
             )}
@@ -739,196 +917,12 @@ export function AiAssistant({
 
         {/* Right: chat */}
         <div className="flex-1 flex flex-col min-h-0">
-          {/* Messages area */}
-          <div
-            className="flex-1 overflow-y-auto p-4 space-y-3"
-            style={{ minHeight: "180px", maxHeight: "280px" }}
-          >
-            {messages.length === 0 ? (
-              <AvatarIdle isDark={isDark} isSpeaking={isSpeaking} isRecording={isRecording} />
-            ) : (
-              messages.map((msg, i) => (
-                <div
-                  key={i}
-                  className={`flex ${msg.role === "user" ? "justify-end" : "justify-start"}`}
-                >
-                  <div className={`flex gap-2 ${msg.role === "user" ? "flex-row-reverse" : "flex-row"} max-w-[92%]`}>
-                    {/* Avatar for assistant messages */}
-                    {msg.role === "assistant" && (
-                      <div
-                        className="w-7 h-7 rounded-full overflow-hidden shrink-0 mt-0.5"
-                        style={{
-                          border: `1px solid ${tiffany}60`,
-                        }}
-                      >
-                        <img
-                          src="/ai-assistant-avatar.png"
-                          alt="AI"
-                          className="w-full h-full object-cover object-top"
-                        />
-                      </div>
-                    )}
-                    <div>
-                      <div
-                        className="rounded-xl px-4 py-2.5 text-sm whitespace-pre-line"
-                        style={msg.role === "user" ? userMsgStyle : asMsgStyle}
-                      >
-                        <div
-                          className="text-[9px] uppercase tracking-widest mb-1 font-semibold"
-                          style={{ color: msg.role === "user" ? userLabelColor : asLabelColor }}
-                        >
-                          {msg.role === "user" ? t("chatUser") : "AIgul"}
-                        </div>
-                        {msg.text}
-                      </div>
-                      {/* TTS button for assistant messages */}
-                      {msg.role === "assistant" && (
-                        <button
-                          onClick={() => handleSpeak(msg.text)}
-                          className="mt-1 flex items-center gap-1 text-[10px] font-medium transition-colors duration-200"
-                          style={{ color: isSpeaking ? "#FB923C" : `${tiffany}99` }}
-                          onMouseEnter={(e) => (e.currentTarget.style.color = isSpeaking ? "#FB923C" : tiffany)}
-                          onMouseLeave={(e) => (e.currentTarget.style.color = isSpeaking ? "#FB923C" : `${tiffany}99`)}
-                        >
-                          {isSpeaking ? (
-                            <><VolumeX className="h-3 w-3" /> {t("aiStopSpeech")}</>
-                          ) : (
-                            <><Volume2 className="h-3 w-3" /> {t("aiReadAloud")}</>
-                          )}
-                        </button>
-                      )}
-                    </div>
-                  </div>
-                </div>
-              ))
-            )}
-            <div ref={messagesEndRef} />
-          </div>
-
-          {/* Input area */}
-          <div
-            className="p-4 border-t space-y-2"
-            style={{ borderColor: dividerColor }}
-          >
-            {isRecording ? (
-              /* ── Recording UI ── */
-              <div className="flex items-center gap-3 rounded-lg px-4 py-3"
-                style={{ background: isDark ? "rgba(239,68,68,0.08)" : "rgba(239,68,68,0.05)", border: "1px solid rgba(239,68,68,0.25)" }}>
-                {/* Red pulsing dot + timer */}
-                <div className="flex items-center gap-2 shrink-0">
-                  <span className="w-3 h-3 rounded-full" style={{ background: "#EF4444", animation: "pulse 1s ease-in-out infinite", boxShadow: "0 0 8px rgba(239,68,68,0.6)" }} />
-                  <span className="text-sm font-mono font-semibold tabular-nums" style={{ color: "#EF4444" }}>
-                    {String(Math.floor(recSeconds / 60)).padStart(2, "0")}:{String(recSeconds % 60).padStart(2, "0")}
-                  </span>
-                </div>
-
-                {/* Live waveform bars */}
-                <div className="flex items-end gap-[2px] h-6 flex-1 justify-center">
-                  {Array.from({ length: 20 }, (_, i) => (
-                    <div key={i} style={{
-                      width: 3, borderRadius: 1.5, background: "#EF4444",
-                      opacity: 0.4 + Math.random() * 0.4,
-                      animation: `eq-bar ${0.3 + (i % 5) * 0.08}s ease-in-out ${i * 0.04}s infinite alternate`,
-                    }} />
-                  ))}
-                </div>
-
-                {/* Cancel */}
-                <button onClick={cancelMic}
-                  className="flex items-center justify-center w-8 h-8 rounded-full transition-colors"
-                  style={{ background: isDark ? "rgba(255,255,255,0.06)" : "rgba(0,0,0,0.05)", color: isDark ? "rgba(255,255,255,0.5)" : "rgba(0,0,0,0.4)" }}
-                  title="Cancel">
-                  <X className="h-4 w-4" />
-                </button>
-
-                {/* Stop & Send */}
-                <button onClick={stopMic}
-                  className="flex items-center gap-2 px-4 py-2 rounded-full text-sm font-semibold transition-all"
-                  style={{ background: "#EF4444", color: "#fff", boxShadow: "0 2px 12px rgba(239,68,68,0.4)" }}>
-                  <Square className="h-3.5 w-3.5" fill="#fff" />
-                  Stop
-                </button>
-              </div>
-            ) : isTranscribing ? (
-              /* ── Transcribing UI ── */
-              <div className="flex items-center justify-center gap-3 rounded-lg px-4 py-4"
-                style={{ background: isDark ? "rgba(250,204,21,0.06)" : "rgba(250,204,21,0.04)", border: "1px solid rgba(250,204,21,0.2)" }}>
-                <span className="w-5 h-5 rounded-full border-2 border-yellow-400/30 border-t-yellow-400" style={{ animation: "spin 0.7s linear infinite" }} />
-                <span className="text-sm font-medium" style={{ color: "#FACC15" }}>Распознаю речь...</span>
-              </div>
-            ) : (
-              /* ── Normal input ── */
-              <div className="flex gap-2">
-                <textarea
-                  value={question}
-                  onChange={(e) => onQuestionChange(e.target.value)}
-                  onKeyDown={handleKey}
-                  rows={2}
-                  className="flex-1 resize-none rounded-lg text-sm px-3 py-2 outline-none transition-all duration-200"
-                  style={{
-                    background: inputBg,
-                    border: `1px solid ${inputBorder}`,
-                    color: inputColor,
-                    caretColor: tiffany,
-                  }}
-                  onFocus={(e) => {
-                    e.currentTarget.style.borderColor = isDark ? "rgba(92,224,214,0.40)" : "rgba(13,148,136,0.40)";
-                    e.currentTarget.style.boxShadow = isDark
-                      ? "0 0 12px rgba(92,224,214,0.12)"
-                      : "0 0 10px rgba(13,148,136,0.08)";
-                  }}
-                  onBlur={(e) => {
-                    e.currentTarget.style.borderColor = inputBorder;
-                    e.currentTarget.style.boxShadow = "none";
-                  }}
-                  placeholder=""
-                />
-                <div className="flex flex-col gap-1">
-                  <button
-                    onClick={startMic}
-                    className="flex items-center justify-center rounded-lg px-3 py-2 transition-all"
-                    style={{
-                      background: isDark ? "rgba(255,255,255,0.06)" : "rgba(0,0,0,0.04)",
-                      border: `1px solid ${isDark ? "rgba(255,255,255,0.1)" : "rgba(0,0,0,0.08)"}`,
-                      color: isDark ? "rgba(255,255,255,0.5)" : "rgba(0,0,0,0.4)",
-                    }}
-                    title="Voice input"
-                  >
-                    <Mic className="h-4 w-4" />
-                  </button>
-                  <ShimmerButton
-                    onClick={onAsk}
-                    disabled={isChatLoading || !question.trim()}
-                    className="flex-1 px-3"
-                  >
-                    {isChatLoading ? (
-                      <span
-                        className="w-4 h-4 rounded-full border-2 border-white/30 border-t-white"
-                        style={{ animation: "spin 0.7s linear infinite" }}
-                      />
-                    ) : (
-                      <Send className="h-4 w-4" />
-                    )}
-                  </ShimmerButton>
-                </div>
-              </div>
-            )}
-            {!isRecording && !isTranscribing && (
-              <p className="text-[10px]" style={{ color: hintColor }}>
-                {t("inputHint")}
-              </p>
-            )}
-          </div>
+          {messagesBlock("280px")}
+          {inputBlock}
         </div>
       </div>
 
-      {/* Equalizer animation keyframes */}
-      <style>{`
-        @keyframes eq-bar {
-          0% { height: 3px; }
-          100% { height: 14px; }
-        }
-      `}</style>
+      <style>{`@keyframes eq-bar { 0% { height: 3px; } 100% { height: 14px; } }`}</style>
     </div>
   );
 }
