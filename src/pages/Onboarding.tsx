@@ -251,7 +251,7 @@ export default function Onboarding() {
       </div>
 
       <p className="mt-6 text-[11px] text-muted-foreground/50">
-        IE:AION · AI Industrial Operations Network · developed by Adil Dauletkhan
+        IE:AION · AI Industrial Operations Network
       </p>
     </div>
   )

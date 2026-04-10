@@ -389,9 +389,6 @@ export function AppSidebar() {
               {activeWorkspace.shortName ?? activeWorkspace.name}
             </p>
           )}
-          <p className="text-[10px] text-sidebar-foreground/40 text-center leading-tight">
-            developed by Adil Dauletkhan
-          </p>
         </div>
       )}
     </aside>
