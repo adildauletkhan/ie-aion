@@ -1,5 +1,6 @@
-const USER_KEY = "capplan_auth_user";
-const PASS_KEY = "capplan_auth_pass";
+const USER_KEY     = "capplan_auth_user";
+const PASS_KEY     = "capplan_auth_pass";
+const IS_ADMIN_KEY = "capplan_auth_is_admin";
 
 export function getAuthHeader(): string | undefined {
   const user = window.localStorage.getItem(USER_KEY);
@@ -20,6 +21,17 @@ export function clearAuthCredentials() {
   window.localStorage.removeItem(EMAIL_KEY);
   window.localStorage.removeItem(ROLE_KEY);
   window.localStorage.removeItem(AVATAR_KEY);
+  window.localStorage.removeItem(IS_ADMIN_KEY);
+}
+
+/** Сохраняет флаг администратора (role === "admin") */
+export function setIsAdmin(value: boolean) {
+  window.localStorage.setItem(IS_ADMIN_KEY, value ? "1" : "0");
+}
+
+/** Является ли текущий пользователь администратором */
+export function isAdmin(): boolean {
+  return window.localStorage.getItem(IS_ADMIN_KEY) === "1";
 }
 
 export function getStoredUser(): string {

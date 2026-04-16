@@ -14,6 +14,7 @@ import { useCompanyProfile } from "@/context/CompanyProfileContext";
 import { useLocation } from "react-router-dom";
 import { Badge } from "@/components/ui/badge";
 import type { IndustryId } from "@/config/industries";
+import { isAdmin } from "@/lib/auth";
 
 const ICON_MAP: Record<string, React.ElementType> = {
   LayoutDashboard, BrainCircuit, FileText, Leaf, Box, Map,
@@ -363,14 +364,16 @@ export function AppSidebar() {
 
       {/* Admin + Настройка */}
       <div className="border-t border-sidebar-border p-2 space-y-0.5">
-        <NavLink
-          to="/admin"
-          className={`${linkClass} w-full`}
-          activeClassName={activeLinkClass}
-        >
-          <Shield className="h-4 w-4 shrink-0" />
-          {!collapsed && <span>{t("navAdmin")}</span>}
-        </NavLink>
+        {isAdmin() && (
+          <NavLink
+            to="/admin"
+            className={`${linkClass} w-full`}
+            activeClassName={activeLinkClass}
+          >
+            <Shield className="h-4 w-4 shrink-0" />
+            {!collapsed && <span>{t("navAdmin")}</span>}
+          </NavLink>
+        )}
         <NavLink
           to="/onboarding"
           className={`${linkClass} w-full`}

@@ -55,6 +55,7 @@ def get_me(
         "username": current_user.username,
         "display_name": current_user.display_name,
         "email": current_user.email,
+        "role": current_user.role,
         "company_name": company_name,
         "workspaces": workspaces,
         "active_workspace_id": active_workspace_id,

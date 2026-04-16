@@ -33,6 +33,8 @@ import GreenGrid from "./pages/GreenGrid";
 import EnergyMap from "./pages/EnergyMap";
 import CompanyStructure from "./pages/CompanyStructure";
 import ProductionProgramKEGOC from "./pages/ProductionProgramKEGOC";
+import ProductionPlanPage from "./pages/ProductionPlanPage";
+import MaintenancePage from "./pages/MaintenancePage";
 import MiningProduction from "./pages/MiningProduction";
 import MiningSafety from "./pages/MiningSafety";
 import MiningMap from "./pages/MiningMap";
@@ -44,6 +46,7 @@ import GasPipelineMap from "./pages/GasPipelineMap";
 import OilPipelineMonitoring from "./pages/OilPipelineMonitoring";
 import GasPipelineMonitoring from "./pages/GasPipelineMonitoring";
 import { OnboardingGuard } from "./components/OnboardingGuard";
+import { AdminGuard } from "./components/AdminGuard";
 
 const queryClient = new QueryClient();
 
@@ -88,13 +91,15 @@ const App = () => (
                     <Route path="/back-allocation" element={<BackAllocation />} />
                     <Route path="/well-logs" element={<WellLogsAnalysis />} />
                     <Route path="/integrations" element={<Integrations />} />
-                    <Route path="/admin" element={<AdminPage />} />
+                    <Route path="/admin" element={<AdminGuard><AdminPage /></AdminGuard>} />
                     <Route path="/predictive" element={<Predictive />} />
                     <Route path="/briefing" element={<DailyBriefing />} />
                     <Route path="/green-grid" element={<GreenGrid />} />
                     <Route path="/energy-map" element={<EnergyMap />} />
                     <Route path="/company-structure" element={<CompanyStructure />} />
                     <Route path="/production-program" element={<ProductionProgramKEGOC />} />
+                    <Route path="/production-plan" element={<ProductionPlanPage />} />
+                    <Route path="/maintenance" element={<MaintenancePage />} />
                     <Route path="/mining-production" element={<MiningProduction />} />
                     <Route path="/mining-safety" element={<MiningSafety />} />
                     <Route path="/mining-map" element={<MiningMap />} />

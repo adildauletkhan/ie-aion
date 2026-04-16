@@ -3,7 +3,7 @@ import { useNavigate, useLocation, Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useLanguage } from "@/hooks/useLanguage";
-import { getStoredUser, isAuthenticated, saveAuthCredentials, setDisplayName, setStoredEmail } from "@/lib/auth";
+import { getStoredUser, isAuthenticated, saveAuthCredentials, setDisplayName, setStoredEmail, setIsAdmin } from "@/lib/auth";
 import { trackLogin } from "@/hooks/useActivityTracker";
 import { ArrowRight, ArrowLeft, Eye, EyeOff } from "lucide-react";
 export default function Login() {
@@ -51,12 +51,13 @@ export default function Login() {
       saveAuthCredentials(username.trim(), password);
       setPassword("");
       trackLogin();
-      try {
+        try {
         const meRes = await fetch(`${apiBase}/me`, { headers: { Authorization: authHeader } });
         if (meRes.ok) {
           const meData = await meRes.json();
           if (meData.display_name != null) setDisplayName(meData.display_name);
           if (meData.email != null) setStoredEmail(meData.email);
+          setIsAdmin(meData.role === "admin");
         }
       } catch {
         /* ignore */
