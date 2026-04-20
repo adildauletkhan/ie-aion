@@ -8,6 +8,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   Dialog,
   DialogContent,
+  DialogDescription,
   DialogFooter,
   DialogHeader,
   DialogTitle,
@@ -1281,6 +1282,7 @@ export default function AdminPage() {
           <form onSubmit={handleCreateUser}>
             <DialogHeader>
               <DialogTitle>{t("adminCreateUser")}</DialogTitle>
+              <DialogDescription>Заполните данные для создания нового пользователя.</DialogDescription>
             </DialogHeader>
             <div className="grid gap-4 py-4">
               <div className="grid gap-2">
@@ -1365,9 +1367,9 @@ export default function AdminPage() {
           <form onSubmit={handleSaveEditUser}>
             <DialogHeader>
               <DialogTitle>{t("adminEditAccount")}</DialogTitle>
-              {editingUser && (
-                <p className="text-sm text-muted-foreground">{t("adminLoginLabel")}: {editingUser.username}</p>
-              )}
+              <DialogDescription>
+                {editingUser ? `${t("adminLoginLabel")}: ${editingUser.username}` : "Редактирование профиля пользователя."}
+              </DialogDescription>
             </DialogHeader>
             <div className="grid gap-4 py-4">
               <div className="grid gap-2">
@@ -1419,6 +1421,7 @@ export default function AdminPage() {
           <form onSubmit={handleCreateRole}>
             <DialogHeader>
               <DialogTitle>{t("adminCreateRole")}</DialogTitle>
+              <DialogDescription>Введите название новой роли.</DialogDescription>
             </DialogHeader>
             <div className="grid gap-4 py-4">
               <div className="grid gap-2">
@@ -1449,6 +1452,11 @@ export default function AdminPage() {
               <KeyRound className="h-4 w-4 text-primary" />
               Доступ к рабочим пространствам
             </DialogTitle>
+            <DialogDescription>
+              {wsDialogUser
+                ? `Пользователь: ${wsDialogUser.display_name || wsDialogUser.username}`
+                : "Настройте доступ к рабочим пространствам."}
+            </DialogDescription>
             {wsDialogUser && (
               <p className="text-sm text-muted-foreground">
                 Пользователь: <span className="font-semibold text-foreground">{wsDialogUser.display_name || wsDialogUser.username}</span>
@@ -1552,6 +1560,11 @@ export default function AdminPage() {
                 <Lock className="h-4 w-4 text-amber-500" />
                 Смена пароля
               </DialogTitle>
+              <DialogDescription>
+                {changePwUser
+                  ? `Установите новый пароль для пользователя ${changePwUser.display_name || changePwUser.username}.`
+                  : "Установите новый пароль для пользователя."}
+              </DialogDescription>
               {changePwUser && (
                 <p className="text-sm text-muted-foreground">
                   Пользователь: <span className="font-semibold text-foreground">{changePwUser.display_name || changePwUser.username}</span>
@@ -1606,6 +1619,7 @@ export default function AdminPage() {
           <form onSubmit={handleSaveCompany}>
             <DialogHeader>
               <DialogTitle>{editingCompany ? t("adminEditCompany") : t("adminCreateCompany")}</DialogTitle>
+              <DialogDescription>Заполните название и код компании.</DialogDescription>
             </DialogHeader>
             <div className="grid gap-4 py-4">
               <div className="grid gap-2">
