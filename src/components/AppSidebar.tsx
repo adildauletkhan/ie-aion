@@ -14,7 +14,7 @@ import { useCompanyProfile } from "@/context/CompanyProfileContext";
 import { useLocation } from "react-router-dom";
 import { Badge } from "@/components/ui/badge";
 import type { IndustryId } from "@/config/industries";
-import { isAdmin } from "@/lib/auth";
+import { isAdmin, setIsAdmin, getAuthHeader } from "@/lib/auth";
 
 const ICON_MAP: Record<string, React.ElementType> = {
   LayoutDashboard, BrainCircuit, FileText, Leaf, Box, Map,
@@ -46,9 +46,25 @@ export function AppSidebar() {
   const location = useLocation();
 
   useEffect(() => {
-    const refresh = () => setAdminFlag(isAdmin());
-    window.addEventListener("auth-refreshed", refresh);
-    return () => window.removeEventListener("auth-refreshed", refresh);
+    // Подписка на событие от AuthRefresher
+    const onRefresh = () => setAdminFlag(isAdmin());
+    window.addEventListener("auth-refreshed", onRefresh);
+
+    // Независимый прямой запрос к /api/me для получения роли
+    const authHeader = getAuthHeader();
+    if (authHeader) {
+      fetch("/api/me", { headers: { Authorization: authHeader } })
+        .then((r) => r.ok ? r.json() : null)
+        .then((data) => {
+          if (data) {
+            setIsAdmin(data.role === "admin");
+            setAdminFlag(data.role === "admin");
+          }
+        })
+        .catch(() => {});
+    }
+
+    return () => window.removeEventListener("auth-refreshed", onRefresh);
   }, []);
 
   const isEnergy = profile.industry === 'energy';
