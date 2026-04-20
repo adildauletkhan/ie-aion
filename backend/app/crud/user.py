@@ -35,10 +35,11 @@ def create_user(
 def ensure_admin(db: Session, username: str, password: str) -> User:
     existing = get_by_username(db, username)
     if existing:
-        existing.hashed_password = hash_password(password)
-        existing.role = "admin"  # всегда сохраняем роль admin для учётной записи admin
-        db.commit()
-        db.refresh(existing)
+        # Only enforce role; do NOT reset password (preserves manually changed passwords)
+        if existing.role != "admin":
+            existing.role = "admin"
+            db.commit()
+            db.refresh(existing)
         return existing
     return create_user(db, username=username, password=password, role="admin")
 
