@@ -151,6 +151,13 @@ export default function AdminPage() {
   const [wsAssignments, setWsAssignments] = useState<WorkspaceAssignment[]>([]);
   const [wsSaving, setWsSaving] = useState(false);
 
+  // Change password dialog
+  const [changePwDialogOpen, setChangePwDialogOpen] = useState(false);
+  const [changePwUser, setChangePwUser] = useState<UserRow | null>(null);
+  const [changePwForm, setChangePwForm] = useState({ password: "", confirm: "" });
+  const [changePwError, setChangePwError] = useState<string | null>(null);
+  const [changePwLoading, setChangePwLoading] = useState(false);
+
   // Workspace matrix tab
   // map: userId -> list of assignments
   const [matrixData, setMatrixData] = useState<Record<number, WorkspaceAssignment[]>>({});
@@ -380,6 +387,41 @@ export default function AdminPage() {
     loadSystemStats();
   };
 
+  const handleOpenChangePw = (u: UserRow) => {
+    setChangePwUser(u);
+    setChangePwForm({ password: "", confirm: "" });
+    setChangePwError(null);
+    setChangePwDialogOpen(true);
+  };
+
+  const handleChangePassword = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (changePwForm.password.length < 6) {
+      setChangePwError("Пароль должен содержать минимум 6 символов");
+      return;
+    }
+    if (changePwForm.password !== changePwForm.confirm) {
+      setChangePwError("Пароли не совпадают");
+      return;
+    }
+    if (!changePwUser) return;
+    setChangePwLoading(true);
+    setChangePwError(null);
+    const res = await fetch(`${getApiBase()}/admin/users/${changePwUser.id}/change-password`, {
+      method: "POST",
+      headers,
+      body: JSON.stringify({ new_password: changePwForm.password }),
+    });
+    setChangePwLoading(false);
+    if (res.ok) {
+      setChangePwDialogOpen(false);
+      setChangePwUser(null);
+    } else {
+      const d = await res.json().catch(() => ({}));
+      setChangePwError(d.detail || "Ошибка смены пароля");
+    }
+  };
+
   const handleOpenEditUser = (u: UserRow) => {
     setEditingUser(u);
     setUserEditForm({
@@ -602,6 +644,14 @@ export default function AdminPage() {
                             <div className="inline-flex items-center gap-1">
                               <Button size="icon" variant="ghost" onClick={() => handleOpenEditUser(u)} title={t("adminEdit")}>
                                 <Pencil className="h-4 w-4" />
+                              </Button>
+                              <Button
+                                size="icon"
+                                variant="ghost"
+                                onClick={() => handleOpenChangePw(u)}
+                                title="Сменить пароль"
+                              >
+                                <Lock className="h-4 w-4 text-amber-500" />
                               </Button>
                               <Button
                                 size="icon"
@@ -1490,6 +1540,63 @@ export default function AdminPage() {
               {wsSaving ? "Сохранение..." : "Сохранить доступ"}
             </Button>
           </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Change password dialog */}
+      <Dialog open={changePwDialogOpen} onOpenChange={(open) => { if (!open) { setChangePwDialogOpen(false); setChangePwUser(null); } }}>
+        <DialogContent>
+          <form onSubmit={handleChangePassword}>
+            <DialogHeader>
+              <DialogTitle className="flex items-center gap-2">
+                <Lock className="h-4 w-4 text-amber-500" />
+                Смена пароля
+              </DialogTitle>
+              {changePwUser && (
+                <p className="text-sm text-muted-foreground">
+                  Пользователь: <span className="font-semibold text-foreground">{changePwUser.display_name || changePwUser.username}</span>
+                  {" "}(<span className="font-mono">{changePwUser.username}</span>)
+                </p>
+              )}
+            </DialogHeader>
+            <div className="grid gap-4 py-4">
+              {changePwError && (
+                <div className="rounded-md bg-destructive/10 text-destructive px-3 py-2 text-sm">
+                  {changePwError}
+                </div>
+              )}
+              <div className="grid gap-2">
+                <Label>Новый пароль</Label>
+                <Input
+                  type="password"
+                  value={changePwForm.password}
+                  onChange={(e) => setChangePwForm((p) => ({ ...p, password: e.target.value }))}
+                  placeholder="Минимум 6 символов"
+                  required
+                  autoComplete="new-password"
+                />
+              </div>
+              <div className="grid gap-2">
+                <Label>Подтвердите пароль</Label>
+                <Input
+                  type="password"
+                  value={changePwForm.confirm}
+                  onChange={(e) => setChangePwForm((p) => ({ ...p, confirm: e.target.value }))}
+                  placeholder="Повторите пароль"
+                  required
+                  autoComplete="new-password"
+                />
+              </div>
+            </div>
+            <DialogFooter>
+              <Button type="button" variant="outline" onClick={() => { setChangePwDialogOpen(false); setChangePwUser(null); }}>
+                Отмена
+              </Button>
+              <Button type="submit" disabled={changePwLoading}>
+                {changePwLoading ? "Сохранение..." : "Сменить пароль"}
+              </Button>
+            </DialogFooter>
+          </form>
         </DialogContent>
       </Dialog>
 
