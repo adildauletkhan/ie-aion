@@ -1,4 +1,4 @@
-# Use Python 3.13 slim image
+# build-stamp: 2026-03-22-v2
 FROM python:3.13-slim
 
 # Install system dependencies
