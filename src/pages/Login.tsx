@@ -51,13 +51,19 @@ export default function Login() {
       saveAuthCredentials(username.trim(), password);
       setPassword("");
       trackLogin();
-        try {
-        const meRes = await fetch(`${apiBase}/me`, { headers: { Authorization: authHeader } });
+      try {
+        const [meRes, adminRes] = await Promise.all([
+          fetch(`${apiBase}/me`, { headers: { Authorization: authHeader } }),
+          fetch(`${apiBase}/admin/system-stats`, { headers: { Authorization: authHeader } }),
+        ]);
         if (meRes.ok) {
           const meData = await meRes.json();
           if (meData.display_name != null) setDisplayName(meData.display_name);
           if (meData.email != null) setStoredEmail(meData.email);
-          setIsAdmin(meData.role === "admin");
+          // byRole works when backend is new; byAccess works on older backends
+          const byRole   = meData.role === "admin";
+          const byAccess = adminRes.status === 200;
+          setIsAdmin(byRole || byAccess);
         }
       } catch {
         /* ignore */

@@ -46,22 +46,23 @@ export function AppSidebar() {
   const location = useLocation();
 
   useEffect(() => {
-    // Подписка на событие от AuthRefresher
     const onRefresh = () => setAdminFlag(isAdmin());
     window.addEventListener("auth-refreshed", onRefresh);
 
-    // Независимый прямой запрос к /api/me для получения роли
     const authHeader = getAuthHeader();
     if (authHeader) {
-      fetch("/api/me", { headers: { Authorization: authHeader } })
-        .then((r) => r.ok ? r.json() : null)
-        .then((data) => {
-          if (data) {
-            setIsAdmin(data.role === "admin");
-            setAdminFlag(data.role === "admin");
-          }
-        })
-        .catch(() => {});
+      // Primary: check role from /me (if backend supports it)
+      // Fallback: probe admin endpoint directly — works even on older backends
+      Promise.all([
+        fetch("/api/me", { headers: { Authorization: authHeader } }).then((r) => r.ok ? r.json() : null).catch(() => null),
+        fetch("/api/admin/system-stats", { headers: { Authorization: authHeader } }).then((r) => r.status).catch(() => 0),
+      ]).then(([meData, adminStatus]) => {
+        const byRole   = meData?.role === "admin";
+        const byAccess = adminStatus === 200;
+        const flag = byRole || byAccess;
+        setIsAdmin(flag);
+        setAdminFlag(flag);
+      });
     }
 
     return () => window.removeEventListener("auth-refreshed", onRefresh);
