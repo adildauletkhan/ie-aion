@@ -47,6 +47,25 @@ import OilPipelineMonitoring from "./pages/OilPipelineMonitoring";
 import GasPipelineMonitoring from "./pages/GasPipelineMonitoring";
 import { OnboardingGuard } from "./components/OnboardingGuard";
 import { AdminGuard } from "./components/AdminGuard";
+import { useEffect } from "react";
+import { getAuthHeader, isAuthenticated, setIsAdmin } from "@/lib/auth";
+
+/** Синхронизирует isAdmin с сервером при каждой загрузке приложения */
+function AuthRefresher() {
+  useEffect(() => {
+    if (!isAuthenticated()) return;
+    fetch("/api/me", { headers: { Authorization: getAuthHeader() ?? "" } })
+      .then((r) => r.ok ? r.json() : null)
+      .then((data) => {
+        if (data) {
+          setIsAdmin(data.role === "admin");
+          window.dispatchEvent(new Event("auth-refreshed"));
+        }
+      })
+      .catch(() => {});
+  }, []);
+  return null;
+}
 
 const queryClient = new QueryClient();
 
@@ -61,6 +80,7 @@ const App = () => (
           v7_relativeSplatPath: true,
         }}
       >
+        <AuthRefresher />
         <ThemeProvider>
           <LanguageProvider>
           <CompanyProfileProvider>

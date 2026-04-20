@@ -7,7 +7,7 @@ import {
   Route, Gauge, Droplets, Wind, Wrench, Flame,
 } from "lucide-react";
 import { NavLink } from "@/components/NavLink";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useLanguage } from "@/hooks/useLanguage";
 import { useWorkspace } from "@/context/WorkspaceContext";
 import { useCompanyProfile } from "@/context/CompanyProfileContext";
@@ -39,10 +39,17 @@ export function AppSidebar() {
   const [planningOpen, setPlanningOpen] = useState(false);
   const [eventMgmtOpen, setEventMgmtOpen] = useState(false);
   const [assetsOpen, setAssetsOpen] = useState(false);
+  const [adminFlag, setAdminFlag] = useState(isAdmin());
   const { t } = useLanguage();
   const { activeWorkspace } = useWorkspace();
   const { profile, getIndustryPack } = useCompanyProfile();
   const location = useLocation();
+
+  useEffect(() => {
+    const refresh = () => setAdminFlag(isAdmin());
+    window.addEventListener("auth-refreshed", refresh);
+    return () => window.removeEventListener("auth-refreshed", refresh);
+  }, []);
 
   const isEnergy = profile.industry === 'energy';
   const isMining = profile.industry === 'mining';
@@ -364,7 +371,7 @@ export function AppSidebar() {
 
       {/* Admin + Настройка */}
       <div className="border-t border-sidebar-border p-2 space-y-0.5">
-        {isAdmin() && (
+        {adminFlag && (
           <NavLink
             to="/admin"
             className={`${linkClass} w-full`}
