@@ -1,15 +1,24 @@
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useMemo } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { ComposableMap, Geographies, Geography } from 'react-simple-maps'
 import { Badge } from '@/components/ui/badge'
+import { Button } from '@/components/ui/button'
 import { useTheme } from '@/hooks/useTheme'
+import { useLanguage } from '@/hooks/useLanguage'
 import {
   Droplets, Gauge, Activity, X, MapPin,
   AlertTriangle, CheckCircle2, Wrench, ArrowRight,
-  Zap, BarChart3, Navigation,
+  Zap, BarChart3, Navigation, ExternalLink, Building2,
+  ChevronRight, Globe2, Brain, Calendar,
+  DollarSign, Cpu,
 } from 'lucide-react'
 import {
   AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
 } from 'recharts'
+import {
+  STATION_MAINTENANCE, ALL_REPAIRS, TOTAL_PPR, generateScenarios,
+  type AIScenario, type RepairItem,
+} from '../data/npsMaintenanceData'
 
 const GEO_URL = '/kz-regions.json'
 const W = 960, H = 540
@@ -44,7 +53,7 @@ interface OilRoute {
 }
 
 /* ═══════════════════════════════════════════════════════════════════════════
-   ROUTES — скорректированы по схеме КазТрансОйл
+   ROUTES — приведены строго по схеме АО «КазТрансОйл»
    ═══════════════════════════════════════════════════════════════════════════ */
 const ROUTES: OilRoute[] = [
   {
@@ -52,9 +61,11 @@ const ROUTES: OilRoute[] = [
     name: 'КТК — Каспийский трубопроводный консорциум',
     shortName: 'КТК',
     type: 'export', color: '#ef4444',
+    // Тенгиз → Атырау → на запад вдоль Каспия → пересечение в Россию → Новороссийск
     waypoints: [
-      mp(53.0, 45.5), mp(52.5, 46.2), mp(51.9, 47.1),
-      mp(51.0, 47.5), mp(49.8, 47.8), mp(48.0, 47.0),
+      mp(53.0, 45.5), mp(51.9, 47.1),
+      mp(50.5, 47.5), mp(49.3, 47.4),
+      mp(48.0, 47.0), mp(46.8, 46.7),
     ],
     length: 1511, throughput: 38.1, capacity: 42.0, pressure: 6.4, status: 'ok',
     dest: 'Новороссийск (Россия)', owner: 'КТК (КМГ 19%)', year: '2001',
@@ -65,9 +76,10 @@ const ROUTES: OilRoute[] = [
     name: 'Атырау — Самара',
     shortName: 'А-С',
     type: 'export', color: '#f59e0b',
+    // Атырау → строго на север вдоль р.Урал → Уральск → пересечение в Россию → Самара
     waypoints: [
-      mp(51.9, 47.1), mp(51.6, 48.5), mp(51.4, 50.0),
-      mp(51.2, 51.2), mp(50.8, 52.4),
+      mp(51.9, 47.1), mp(51.9, 47.8), mp(51.6, 49.0),
+      mp(51.3, 50.3), mp(51.2, 51.2), mp(50.9, 52.3),
     ],
     length: 1200, throughput: 15.4, capacity: 19.0, pressure: 6.1, status: 'ok',
     dest: 'Самара (Россия)', owner: 'КазТрансОйл', year: '1970 (рек. 2021)',
@@ -78,12 +90,12 @@ const ROUTES: OilRoute[] = [
     name: 'Атырау — Кенкияк — Атасу (АКА)',
     shortName: 'АКА',
     type: 'domestic', color: '#f97316',
-    // ИСПРАВЛЕНО: маршрут идёт на ВОСТОК от Атырау через Кенкияк до Атасу
+    // Атырау → Кенкияк (через Актобе) → Кумколь → Баракатым → Атасу
     waypoints: [
-      mp(51.9, 47.1), mp(53.5, 47.5), mp(55.5, 48.2),
-      mp(55.7, 49.4), mp(58.5, 48.8), mp(61.5, 47.5),
-      mp(63.8, 47.0), mp(65.8, 45.8), mp(68.2, 46.8),
-      mp(71.7, 48.5),
+      mp(51.9, 47.1), mp(53.2, 47.4), mp(54.8, 48.1),
+      mp(55.7, 49.4), mp(57.2, 50.3), mp(59.5, 50.0),
+      mp(61.5, 47.5), mp(63.8, 47.0), mp(65.8, 45.8),
+      mp(68.2, 46.8), mp(71.7, 48.5),
     ],
     length: 1840, throughput: 10.2, capacity: 15.0, pressure: 6.0, status: 'ok',
     dest: 'Атасу (КЗ)', owner: 'КазТрансОйл', year: '2003–2009',
@@ -94,8 +106,10 @@ const ROUTES: OilRoute[] = [
     name: 'Омск — Павлодар (импорт)',
     shortName: 'О-П',
     type: 'import', color: '#6b7280',
+    // Омск → Петропавловск → Павлодар (с севера)
     waypoints: [
-      mp(73.4, 55.0), mp(73.6, 54.3), mp(75.0, 53.3), mp(76.9, 52.3),
+      mp(73.4, 55.0), mp(72.5, 54.5), mp(72.8, 53.7),
+      mp(73.5, 52.8), mp(76.9, 52.3),
     ],
     length: 430, throughput: 7.2, capacity: 9.0, pressure: 5.4, status: 'ok',
     dest: 'ПНХЗ Павлодар', owner: 'КазТрансОйл / Транснефть', year: '1972',
@@ -106,10 +120,13 @@ const ROUTES: OilRoute[] = [
     name: 'Павлодар — Шымкент',
     shortName: 'П-Ш',
     type: 'domestic', color: '#6366f1',
+    // Павлодар → Экибастуз → Астана (обход) → Жезказган → Кызылорда → Шымкент
     waypoints: [
-      mp(76.9, 52.3), mp(74.5, 51.2), mp(73.1, 49.8),
-      mp(71.0, 48.5), mp(67.7, 47.8), mp(66.5, 46.0),
-      mp(65.5, 44.8), mp(67.5, 43.2), mp(69.6, 42.3),
+      mp(76.9, 52.3), mp(75.3, 51.7), mp(74.2, 51.0),
+      mp(72.5, 51.2), mp(71.0, 51.0), mp(70.5, 49.5),
+      mp(68.4, 48.1), mp(67.7, 47.8), mp(66.5, 46.0),
+      mp(65.5, 44.8), mp(66.2, 43.8), mp(67.5, 43.2),
+      mp(68.5, 42.9), mp(69.6, 42.3),
     ],
     length: 1900, throughput: 8.3, capacity: 12.0, pressure: 5.5, status: 'maint',
     dest: 'ПКОП Шымкент', owner: 'КазТрансОйл', year: '1975',
@@ -120,8 +137,10 @@ const ROUTES: OilRoute[] = [
     name: 'Атасу — Алашанькоу (КККМ)',
     shortName: 'КККМ',
     type: 'export', color: '#dc2626',
+    // Атасу → НПС-8 → НПС-9 → НПС-10 → НПС-15 Достык → граница КНР
     waypoints: [
-      mp(71.7, 48.5), mp(75.0, 47.8), mp(78.5, 46.5), mp(82.3, 45.2),
+      mp(71.7, 48.5), mp(74.5, 47.5), mp(77.0, 46.5),
+      mp(79.0, 45.8), mp(81.0, 45.4), mp(82.3, 45.2),
     ],
     length: 1384, throughput: 12.6, capacity: 20.0, pressure: 5.8, status: 'ok',
     dest: 'Алашанькоу (КНР)', owner: 'КККМ (КМГ 50% + CNPC 50%)', year: '2006',
@@ -132,8 +151,10 @@ const ROUTES: OilRoute[] = [
     name: 'Узень — Жетыбай — Актау',
     shortName: 'У-А',
     type: 'domestic', color: '#8b5cf6',
+    // Узень → Жетыбай → Актау (морской терминал) — с востока на запад в Мангистау
     waypoints: [
-      mp(53.8, 43.3), mp(53.0, 43.5), mp(52.0, 43.6), mp(51.2, 43.6),
+      mp(53.8, 43.3), mp(52.9, 43.4),
+      mp(52.2, 43.5), mp(51.3, 43.6),
     ],
     length: 330, throughput: 4.1, capacity: 6.0, pressure: 5.2, status: 'ok',
     dest: 'Морской терминал Актау', owner: 'КазТрансОйл', year: '1985',
@@ -213,8 +234,8 @@ const KZ_CITIES = [
 ]
 
 const STATUS_COLOR: Record<Status, string> = { ok: '#22c55e', warn: '#f59e0b', maint: '#6366f1' }
-const STATUS_LABEL: Record<Status, string> = { ok: 'В работе', warn: 'Внимание', maint: 'Техобслуживание' }
-const TYPE_LABEL: Record<string, string> = { export: 'Экспорт', domestic: 'Внутренний', import: 'Импорт' }
+const STATUS_LABEL_KEY: Record<Status, string> = { ok: 'pmapStatusOk', warn: 'pmapStatusWarn', maint: 'pmapStatusMaint' }
+const TYPE_LABEL_KEY: Record<string, string> = { export: 'pmapTypeExport', domestic: 'pmapTypeDomestic', import: 'pmapTypeImport' }
 
 const THROUGHPUT_HISTORY = [
   { month: 'Янв', ktk: 36.2, as: 14.8, kkkm: 11.9, aka: 9.4 },
@@ -228,12 +249,552 @@ const THROUGHPUT_HISTORY = [
 function totalThroughput() { return ROUTES.filter(r => r.type !== 'import').reduce((s, r) => s + r.throughput, 0) }
 
 /* ═══════════════════════════════════════════════════════════════════════════
+   KTO ASSET STRUCTURE
+   ═══════════════════════════════════════════════════════════════════════════ */
+const KTO_STRUCTURE = {
+  parent: { name: 'АО «КазТрансОйл»', country: 'Казахстан', color: '#3b82f6' },
+  children: [
+    {
+      id: 'szhtk', name: 'АО «СЗТК «МунайТас»', country: 'Казахстан',
+      share: 51, color: '#0ea5e9',
+      desc: 'Северо-западный трубопроводный консорциум. Эксплуатация нефтепроводов в СКО и ЗКО.',
+      routes: ['Уральск — Самара', 'Кенкияк — Атырау'],
+      kpi: { length: '1 160 км', throughput: '7.2 млн т/год' },
+    },
+    {
+      id: 'kktk', name: 'ТОО «Казахстанско-Китайский Трубопровод»', country: 'Казахстан',
+      share: 50, color: '#6366f1',
+      desc: 'Оператор казахстанского участка нефтепровода Казахстан–Китай. Совместное предприятие КТО и CNPC.',
+      routes: ['Атасу — Алашанькоу (КККМ)'],
+      kpi: { length: '1 384 км', throughput: '12.6 млн т/год' },
+    },
+    {
+      id: 'bnt', name: 'ООО «Батумский нефтяной терминал»', country: 'Грузия',
+      share: 100, color: '#10b981',
+      desc: 'Нефтяной терминал в порту Батуми (Черное море). Перевалка казахстанской нефти на суда.',
+      routes: ['Транзит: Баку — Тбилиси — Батуми'],
+      kpi: { capacity: '5 млн т/год', tanks: '12 резервуаров' },
+      children: [{
+        id: 'bmp', name: 'ООО «Батумский морской порт»', country: 'Грузия',
+        share: 100, color: '#14b8a6',
+        note: 'Эксклюзивные права на управление 100% долей',
+        kpi: { berths: '3 причала', depth: '12 м' },
+      }],
+    },
+    {
+      id: 'ptl', name: '«Petrotrans Limited»', country: 'БВО',
+      share: 100, color: '#8b5cf6',
+      desc: 'Холдинговая компания для зарубежных активов КТО. Зарегистрирована на Британских Виргинских островах.',
+      routes: ['—'],
+      kpi: { type: 'Холдинг', assets: 'Международные' },
+    },
+  ],
+}
+
+function StructureNode({ node, depth = 0, isDark }: {
+  node: typeof KTO_STRUCTURE.children[0] & { children?: typeof KTO_STRUCTURE.children }
+  depth?: number
+  isDark: boolean
+}) {
+  const { t, translateData: tt } = useLanguage()
+  const [open, setOpen] = useState(true)
+  const hasChildren = node.children && node.children.length > 0
+
+  return (
+    <div className="relative">
+      {depth > 0 && (
+        <div className="absolute left-0 top-0 bottom-0 border-l-2 border-dashed"
+          style={{ borderColor: `${node.color}40`, left: -20 }} />
+      )}
+      <div className="rounded-xl border p-4 mb-3 transition-all hover:shadow-md"
+        style={{
+          borderColor: `${node.color}40`,
+          background: isDark ? `${node.color}08` : `${node.color}05`,
+          marginLeft: depth > 0 ? 24 : 0,
+        }}>
+        {/* Header */}
+        <div className="flex items-start justify-between gap-2">
+          <div className="flex-1">
+            <div className="flex items-center gap-2 flex-wrap">
+              <Building2 className="h-4 w-4 shrink-0" style={{ color: node.color }} />
+              <span className="font-semibold text-sm">{tt(node.name)}</span>
+              <Badge variant="outline" className="text-xs"
+                style={{ borderColor: `${node.color}50`, color: node.color }}>
+                {node.share}%
+              </Badge>
+              <Badge variant="outline" className="text-xs flex items-center gap-1">
+                <Globe2 className="h-2.5 w-2.5" />{tt(node.country)}
+              </Badge>
+            </div>
+            {'desc' in node && node.desc && (
+              <p className="text-[11px] text-muted-foreground mt-1.5 leading-relaxed">{tt(node.desc)}</p>
+            )}
+            {'note' in node && (node as { note?: string }).note && (
+              <p className="text-[10px] mt-1" style={{ color: node.color }}>
+                ★ {tt((node as { note?: string }).note ?? '')}
+              </p>
+            )}
+          </div>
+          {hasChildren && (
+            <Button size="icon" variant="ghost" className="h-6 w-6 shrink-0" onClick={() => setOpen(o => !o)}>
+              <ChevronRight className={`h-3.5 w-3.5 transition-transform ${open ? 'rotate-90' : ''}`} />
+            </Button>
+          )}
+        </div>
+        {/* KPIs */}
+        {'kpi' in node && (
+          <div className="flex flex-wrap gap-3 mt-2">
+            {Object.entries(node.kpi ?? {}).map(([k, v]) => (
+              <div key={k} className="text-xs">
+                <span className="text-muted-foreground capitalize">{tt(k)}: </span>
+                <span className="font-semibold" style={{ color: node.color }}>{tt(String(v))}</span>
+              </div>
+            ))}
+          </div>
+        )}
+        {'routes' in node && (node as { routes?: string[] }).routes && (
+          <div className="mt-1.5 text-[10px] text-muted-foreground">
+            {t('pmapStructureRoutes')}: {(node as { routes: string[] }).routes.map(r => tt(r)).join(' · ')}
+          </div>
+        )}
+      </div>
+      {/* Children */}
+      {hasChildren && open && (
+        <div className="ml-6">
+          {node.children!.map(child => (
+            <StructureNode key={child.id} node={child as typeof KTO_STRUCTURE.children[0]} depth={depth + 1} isDark={isDark} />
+          ))}
+        </div>
+      )}
+    </div>
+  )
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   STATION OEE MINI-PANEL (shown inside map side panel)
+   ═══════════════════════════════════════════════════════════════════════════ */
+function StationOEEPanel({ maintenance, isDark }: {
+  maintenance: ReturnType<typeof Object.values<typeof STATION_MAINTENANCE[string]>>
+  isDark: boolean
+}) {
+  const { t, translateData: tt, language } = useLanguage()
+  const { oee, ppr2026, repairs } = maintenance as typeof STATION_MAINTENANCE[string]
+  const nextRepair  = repairs[0]
+  const critCount   = repairs.filter(r => r.priority === 'critical').length
+  const oeeColor    = oee.oee >= 80 ? '#22c55e' : oee.oee >= 70 ? '#f59e0b' : '#ef4444'
+
+  return (
+    <div className="space-y-3">
+      {/* OEE block */}
+      <div className="rounded-lg border p-3 space-y-2"
+        style={{ borderColor: `${oeeColor}30`, background: isDark ? `${oeeColor}08` : `${oeeColor}06` }}>
+        <div className="flex items-center justify-between">
+          <span className="text-[9px] uppercase tracking-widest text-muted-foreground font-semibold flex items-center gap-1">
+            <Cpu className="h-3 w-3" />{t('pmapStationPanelOEEHeader')}
+          </span>
+          <span className="text-lg font-bold" style={{ color: oeeColor }}>{oee.oee.toFixed(1)}%</span>
+        </div>
+        {[
+          { label: t('pmapStationPanelAvailability'), val: oee.availability },
+          { label: t('pmapStationPanelPerformance'),  val: oee.performance },
+          { label: t('pmapStationPanelQuality'),      val: oee.quality },
+        ].map(m => (
+          <div key={m.label}>
+            <div className="flex justify-between text-[10px] mb-0.5">
+              <span className="text-muted-foreground">{m.label}</span>
+              <span className="font-medium">{m.val}%</span>
+            </div>
+            <div className="h-1.5 rounded-full bg-muted overflow-hidden">
+              <div className="h-full rounded-full" style={{
+                width: `${m.val}%`,
+                background: m.val >= 90 ? '#22c55e' : m.val >= 80 ? '#f59e0b' : '#ef4444',
+              }} />
+            </div>
+          </div>
+        ))}
+        <div className="flex gap-3 text-[9px] text-muted-foreground pt-1 border-t" style={{ borderColor: `${oeeColor}20` }}>
+          <span>MTBF: <b className="text-foreground">{oee.mtbf}ч</b></span>
+          <span>MTTR: <b className="text-foreground">{oee.mttr}ч</b></span>
+        </div>
+      </div>
+
+      {/* PPR budget */}
+      <div className="rounded-lg border p-3 space-y-1.5"
+        style={{ borderColor: 'rgba(99,102,241,0.25)', background: isDark ? 'rgba(99,102,241,0.06)' : 'rgba(99,102,241,0.04)' }}>
+        <div className="flex items-center justify-between">
+          <span className="text-[9px] uppercase tracking-widest text-muted-foreground font-semibold flex items-center gap-1">
+            <DollarSign className="h-3 w-3" />{t('pmapStationPanelPpr')}
+          </span>
+          <span className="text-[10px] font-bold text-indigo-400">{ppr2026.spent.toFixed(0)} / {ppr2026.planned.toFixed(0)} {t('npsCurrencyMln')}</span>
+        </div>
+        <div className="h-1.5 rounded-full bg-muted overflow-hidden">
+          <div className="h-full rounded-full bg-indigo-500" style={{ width: `${ppr2026.pct}%` }} />
+        </div>
+        <div className="flex justify-between text-[9px] text-muted-foreground">
+          <span>{t('pmapStationPanelMastered')}: {ppr2026.pct}%</span>
+          <span>{t('pmapStationPanelRemaining')}: {ppr2026.remaining.toFixed(0)} {t('npsCurrencyMln')}</span>
+        </div>
+      </div>
+
+      {/* Next repair */}
+      {nextRepair && (
+        <div className="rounded-lg border p-3"
+          style={{
+            borderColor: nextRepair.priority === 'critical' ? 'rgba(239,68,68,0.4)' : 'rgba(245,158,11,0.3)',
+            background: isDark
+              ? (nextRepair.priority === 'critical' ? 'rgba(239,68,68,0.07)' : 'rgba(245,158,11,0.06)')
+              : (nextRepair.priority === 'critical' ? 'rgba(239,68,68,0.05)' : 'rgba(245,158,11,0.04)'),
+          }}>
+          <div className="flex items-center gap-1.5 mb-1.5">
+            {nextRepair.priority === 'critical'
+              ? <AlertTriangle className="h-3 w-3 text-red-400" />
+              : <Calendar className="h-3 w-3 text-amber-400" />}
+            <span className="text-[9px] uppercase tracking-widest font-semibold"
+              style={{ color: nextRepair.priority === 'critical' ? '#f87171' : '#fbbf24' }}>
+              {t('pmapStationPanelNextRepair')}
+            </span>
+          </div>
+          <p className="text-[10px] font-medium mb-0.5">{tt(nextRepair.equipment)}</p>
+          <p className="text-[10px] text-muted-foreground leading-relaxed mb-1.5">{tt(nextRepair.description)}</p>
+          <div className="flex justify-between text-[10px]">
+            <span className="text-muted-foreground">{new Date(nextRepair.dueDate).toLocaleDateString(language === 'en' ? 'en-GB' : 'ru-RU', { day:'numeric', month:'long' })}</span>
+            <span className="font-bold" style={{ color: nextRepair.priority === 'critical' ? '#f87171' : '#fbbf24' }}>
+              {nextRepair.budget.toFixed(1)} {t('npsCurrencyMln')}
+            </span>
+          </div>
+        </div>
+      )}
+
+      {critCount > 0 && (
+        <div className="rounded-lg border border-red-500/30 bg-red-500/08 p-2.5 flex items-center gap-2">
+          <AlertTriangle className="h-3.5 w-3.5 text-red-400 shrink-0" />
+          <span className="text-[10px] text-red-400">
+            {critCount} {critCount === 1 ? t('pmapStationPanelCritWorkSing') : t('pmapStationPanelCritWorkPlur')}
+          </span>
+        </div>
+      )}
+    </div>
+  )
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   PPR / AI TAB
+   ═══════════════════════════════════════════════════════════════════════════ */
+const PRIORITY_COLOR = { critical: '#ef4444', high: '#f59e0b', medium: '#6366f1' } as const
+const PRIORITY_LABEL_KEY = { critical: 'pmapPriorityCritical', high: 'pmapPriorityHigh', medium: 'pmapPriorityMedium' } as const
+
+function RepairCard({ repair, isDark }: { repair: RepairItem; isDark: boolean }) {
+  const { t, translateData: tt, language } = useLanguage()
+  const color = PRIORITY_COLOR[repair.priority]
+  const due   = new Date(repair.dueDate)
+  const daysLeft = Math.ceil((due.getTime() - Date.now()) / 86400000)
+
+  return (
+    <div className="rounded-xl border p-3 space-y-2"
+      style={{ borderColor: `${color}30`, background: isDark ? `${color}06` : `${color}04` }}>
+      <div className="flex items-start justify-between gap-2">
+        <div className="flex-1">
+          <div className="flex items-center gap-1.5 flex-wrap mb-1">
+            <Badge className="text-[8px] px-1.5 py-0"
+              style={{ background: `${color}20`, color, border: `1px solid ${color}40` }}>
+              {t(PRIORITY_LABEL_KEY[repair.priority])}
+            </Badge>
+            <Badge variant="outline" className="text-[8px] px-1.5 py-0">{
+              repair.type === 'preventive' ? t('pmapPprRepairTypeMaintenance')
+              : repair.type === 'corrective' ? t('pmapPprRepairTypeEmergency')
+              : repair.type === 'overhaul' ? t('pmapPprRepairTypeOverhaul')
+              : t('pmapPprRepairTypeInspection')
+            }</Badge>
+          </div>
+          <p className="text-[11px] font-semibold">{tt(repair.stationName)}</p>
+          <p className="text-[10px] text-muted-foreground">{tt(repair.equipment)}</p>
+          <p className="text-[10px] mt-0.5 leading-relaxed">{tt(repair.description)}</p>
+        </div>
+      </div>
+      <div className="flex items-center justify-between pt-1 border-t" style={{ borderColor: `${color}20` }}>
+        <div className="flex items-center gap-1 text-[9px]" style={{ color: daysLeft < 14 ? '#ef4444' : '#94a3b8' }}>
+          <Calendar className="h-2.5 w-2.5" />
+          {due.toLocaleDateString(language === 'en' ? 'en-GB' : 'ru-RU', { day: 'numeric', month: 'short' })}
+          {daysLeft < 14 && <span className="font-bold"> · {t('pmapPprDaysLeft')} {daysLeft}{t('pmapPprDaysLeftUnit')}</span>}
+        </div>
+        <div className="text-right">
+          <p className="text-[10px] font-bold" style={{ color }}>{repair.budget.toFixed(1)} {t('npsCurrencyMln')}</p>
+          {repair.oeeImpact > 0 && (
+            <p className="text-[8px] text-green-400">+{repair.oeeImpact}% {t('pmapPprOeeImpact')}</p>
+          )}
+        </div>
+      </div>
+    </div>
+  )
+}
+
+function ScenarioCard({ scenario, selected, onSelect, isDark }: {
+  scenario: AIScenario; selected: boolean; onSelect: () => void; isDark: boolean
+}) {
+  const { t, translateData: tt } = useLanguage()
+  const color = scenario.id === 'A' ? '#10b981' : scenario.id === 'B' ? '#6366f1' : '#3b82f6'
+  const bgSel = isDark ? `${color}18` : `${color}10`
+
+  return (
+    <button onClick={onSelect} className="w-full text-left rounded-xl border p-4 transition-all"
+      style={{
+        borderColor: selected ? color : `${color}30`,
+        background: selected ? bgSel : 'transparent',
+        boxShadow: selected ? `0 0 0 2px ${color}60` : 'none',
+      }}>
+      <div className="flex items-start justify-between gap-2 mb-3">
+        <div>
+          <div className="flex items-center gap-2">
+            <span className="text-lg">{scenario.icon}</span>
+            <span className="font-bold text-sm" style={{ color }}>{tt(scenario.name)}</span>
+            {scenario.id === 'B' && (
+              <Badge className="text-[8px] px-1.5 py-0" style={{ background: `${color}25`, color, border: `1px solid ${color}50` }}>
+                {t('pmapAiSelectedBadge')}
+              </Badge>
+            )}
+          </div>
+          <p className="text-[10px] text-muted-foreground mt-0.5">{tt(scenario.tagline)}</p>
+        </div>
+        <div className="text-right shrink-0">
+          <p className="text-sm font-bold" style={{ color }}>{scenario.totalCost.toFixed(0)}</p>
+          <p className="text-[9px] text-muted-foreground">{t('npsCurrencyMln')}</p>
+        </div>
+      </div>
+
+      {/* KPI row */}
+      <div className="grid grid-cols-4 gap-1.5 mb-3">
+        {[
+          { label: 'CAPEX', val: `${scenario.capexPct}%`, color },
+          { label: t('pmapAiKpiSavings'), val: `${scenario.savings.toFixed(0)}₸`, color: '#22c55e' },
+          { label: t('pmapAiKpiOee'),     val: `+${scenario.oeeGain}%`, color: '#60a5fa' },
+          { label: t('pmapAiKpiRisk'),    val: `${scenario.riskScore}/10`, color: scenario.riskScore > 6 ? '#ef4444' : scenario.riskScore > 3 ? '#f59e0b' : '#22c55e' },
+        ].map(k => (
+          <div key={k.label} className="rounded-lg p-1.5 text-center"
+            style={{ background: isDark ? 'rgba(255,255,255,0.04)' : 'rgba(0,0,0,0.03)' }}>
+            <p className="text-[8px] text-muted-foreground">{k.label}</p>
+            <p className="text-[10px] font-bold" style={{ color: k.color }}>{k.val}</p>
+          </div>
+        ))}
+      </div>
+
+      {/* Reasoning */}
+      <div className="space-y-0.5">
+        {scenario.reasoning.map((r, i) => (
+          <p key={i} className="text-[9px] text-muted-foreground flex items-start gap-1">
+            <span style={{ color }}>›</span>{tt(r)}
+          </p>
+        ))}
+      </div>
+
+      {/* Items summary */}
+      <div className="mt-2 pt-2 border-t flex gap-3 text-[9px]"
+        style={{ borderColor: `${color}20` }}>
+        <span className="text-green-400">{t('pmapAiSelectedDone').replace('{n}', String(scenario.selected.length))}</span>
+        {scenario.deferred.length > 0 && (
+          <span className="text-amber-400">{t('pmapAiSelectedDefer').replace('{n}', String(scenario.deferred.length))}</span>
+        )}
+      </div>
+    </button>
+  )
+}
+
+function PPRTab({ isDark }: { isDark: boolean }) {
+  const { t, translateData: tt, language } = useLanguage()
+  const [selectedScenario, setSelectedScenario] = useState<string>('B')
+  const [filterPriority, setFilterPriority] = useState<'all' | 'critical' | 'high' | 'medium'>('all')
+  const [filterStation, setFilterStation] = useState<string>('all')
+
+  const scenarios = useMemo(
+    () => generateScenarios(ALL_REPAIRS, TOTAL_PPR.planned),
+    []
+  )
+
+  const activeScenario = scenarios.find(s => s.id === selectedScenario)!
+
+  const filteredRepairs = ALL_REPAIRS.filter(r => {
+    if (filterPriority !== 'all' && r.priority !== filterPriority) return false
+    if (filterStation !== 'all' && r.stationId !== filterStation) return false
+    return true
+  })
+
+  const stations = Array.from(new Set(ALL_REPAIRS.map(r => ({ id: r.stationId, name: r.stationName })))
+    .values()).reduce((acc, { id, name }) => {
+      if (!acc.find((a: { id: string }) => a.id === id)) acc.push({ id, name })
+      return acc
+    }, [] as { id: string; name: string }[])
+
+  const critCount = ALL_REPAIRS.filter(r => r.priority === 'critical').length
+  const totalBudget = ALL_REPAIRS.reduce((s, r) => s + r.budget, 0)
+
+  return (
+    <div className="space-y-4">
+
+      {/* KPI Strip */}
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+        {[
+          { label: t('pmapPprBudget'), value: `${TOTAL_PPR.planned.toFixed(0)} ${t('npsCurrencyMln')}`, sub: `${t('pmapPprMastered')} ${TOTAL_PPR.pct}%`, icon: DollarSign, color: '#6366f1' },
+          { label: t('pmapPprCritWorks'), value: `${critCount}`, sub: t('pmapPprCritWorksSub'), icon: AlertTriangle, color: '#ef4444' },
+          { label: t('pmapPprNextRepair'), value: tt(ALL_REPAIRS[0]?.stationName.split(' ').slice(-1)[0] ?? '—'), sub: ALL_REPAIRS[0] ? new Date(ALL_REPAIRS[0].dueDate).toLocaleDateString(language === 'en' ? 'en-GB' : 'ru-RU',{day:'numeric',month:'long'}) : '', icon: Calendar, color: '#f59e0b' },
+          { label: t('pmapPprWorksCost'), value: `${totalBudget.toFixed(0)} ${t('npsCurrencyMln')}`, sub: `${ALL_REPAIRS.length} ${t('pmapPprWorksCostSub')}`, icon: Wrench, color: '#22c55e' },
+        ].map(k => (
+          <div key={k.label} className="rounded-xl border p-3"
+            style={{ borderColor: `${k.color}30`, background: isDark ? `${k.color}0a` : `${k.color}07` }}>
+            <div className="flex items-center gap-2 mb-1">
+              <k.icon className="h-3.5 w-3.5" style={{ color: k.color }} />
+              <span className="text-[10px] text-muted-foreground font-medium">{k.label}</span>
+            </div>
+            <p className="text-base font-bold" style={{ color: k.color }}>{k.value}</p>
+            <p className="text-[9px] text-muted-foreground mt-0.5">{k.sub}</p>
+          </div>
+        ))}
+      </div>
+
+      <div className="grid grid-cols-1 xl:grid-cols-5 gap-4">
+
+        {/* ── Left: AI Scenarios ─────────────────────────────────────────────── */}
+        <div className="xl:col-span-2 space-y-3">
+          <div className="flex items-center gap-2">
+            <Brain className="h-4 w-4 text-indigo-400" />
+            <h3 className="text-sm font-bold">{t('pmapPprAiTitle')}</h3>
+            <Badge className="text-[8px]" style={{ background:'rgba(99,102,241,0.2)', color:'#818cf8' }}>
+              {t('pmapPprAiCapexBadge')}
+            </Badge>
+          </div>
+
+          {/* Scenario cards */}
+          <div className="space-y-2">
+            {scenarios.map(s => (
+              <ScenarioCard key={s.id} scenario={s}
+                selected={selectedScenario === s.id}
+                onSelect={() => setSelectedScenario(s.id)}
+                isDark={isDark} />
+            ))}
+          </div>
+
+          {/* Selected scenario detail */}
+          {activeScenario && (
+            <div className="rounded-xl border p-3 space-y-3"
+              style={{ borderColor: 'rgba(99,102,241,0.3)', background: isDark ? 'rgba(99,102,241,0.08)' : 'rgba(99,102,241,0.05)' }}>
+              <p className="text-[9px] uppercase tracking-widest text-muted-foreground font-semibold">
+                {t('pmapPprAiSelectedHeader')}: {tt(activeScenario.name)}
+              </p>
+              <div className="space-y-1">
+                <p className="text-[9px] text-green-400 font-semibold">✓ {t('pmapPprAiToDo')} ({activeScenario.selected.length}):</p>
+                {activeScenario.selected.map(r => (
+                  <div key={r.id} className="flex justify-between text-[10px] pl-3">
+                    <span className="text-muted-foreground truncate mr-2">{tt(r.stationName)} — {tt(r.equipment.split(' ')[0])}</span>
+                    <span className="font-medium shrink-0" style={{ color: PRIORITY_COLOR[r.priority] }}>{r.budget.toFixed(0)} ₸</span>
+                  </div>
+                ))}
+              </div>
+              {activeScenario.deferred.length > 0 && (
+                <div className="space-y-1 pt-2 border-t" style={{ borderColor: 'rgba(99,102,241,0.2)' }}>
+                  <p className="text-[9px] text-amber-400 font-semibold">↷ {t('pmapPprAiToDefer')} ({activeScenario.deferred.length}):</p>
+                  {activeScenario.deferred.map(r => (
+                    <div key={r.id} className="flex justify-between text-[10px] pl-3">
+                      <span className="text-muted-foreground truncate mr-2">{tt(r.stationName)} — {tt(r.equipment.split(' ')[0])}</span>
+                      <span className="font-medium shrink-0 text-amber-400">{r.budget.toFixed(0)} ₸</span>
+                    </div>
+                  ))}
+                </div>
+              )}
+              <div className="pt-2 border-t flex gap-3 text-[10px]"
+                style={{ borderColor: 'rgba(99,102,241,0.2)' }}>
+                <span>{t('pmapPprAiTotal')}: <b className="text-indigo-400">{activeScenario.totalCost.toFixed(0)} {t('npsCurrencyMln')}</b></span>
+                <span>{t('pmapPprAiSavings')}: <b className="text-green-400">{activeScenario.savings.toFixed(0)} {t('npsCurrencyMln')}</b></span>
+                <span>{t('pmapPprAiOeeGain')}: <b className="text-blue-400">{activeScenario.oeeGain}%</b></span>
+              </div>
+            </div>
+          )}
+        </div>
+
+        {/* ── Right: Repair list + OEE table ────────────────────────────────── */}
+        <div className="xl:col-span-3 space-y-3">
+          <div className="flex items-center justify-between gap-2 flex-wrap">
+            <h3 className="text-sm font-bold flex items-center gap-2">
+              <Wrench className="h-4 w-4 text-amber-400" />
+              {t('pmapPprRepairLog')}
+            </h3>
+            <div className="flex gap-1 flex-wrap">
+              {(['all','critical','high','medium'] as const).map(p => (
+                <button key={p} onClick={() => setFilterPriority(p)}
+                  className="px-2.5 py-1 rounded-full text-[10px] font-medium border transition-all"
+                  style={{
+                    background: filterPriority === p ? `${PRIORITY_COLOR[p as keyof typeof PRIORITY_COLOR] ?? '#6366f1'}20` : 'transparent',
+                    borderColor: filterPriority === p ? (PRIORITY_COLOR[p as keyof typeof PRIORITY_COLOR] ?? '#6366f1') : 'rgba(128,128,128,0.2)',
+                    color: filterPriority === p ? (PRIORITY_COLOR[p as keyof typeof PRIORITY_COLOR] ?? '#6366f1') : undefined,
+                  }}>
+                  {p === 'all' ? t('pmapPriorityAll') : t(PRIORITY_LABEL_KEY[p])}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 max-h-[520px] overflow-y-auto pr-1">
+            {filteredRepairs.map(repair => (
+              <RepairCard key={repair.id} repair={repair} isDark={isDark} />
+            ))}
+          </div>
+
+          {/* OEE Table */}
+          <div>
+            <h3 className="text-sm font-bold flex items-center gap-2 mb-2">
+              <Cpu className="h-4 w-4 text-blue-400" />
+              {t('pmapPprOeeTable')}
+            </h3>
+            <div className="rounded-xl border overflow-hidden">
+              <table className="w-full text-[11px]">
+                <thead>
+                  <tr style={{ background: isDark ? 'rgba(255,255,255,0.04)' : 'rgba(0,0,0,0.03)' }}>
+                    {[t('pmapPprTblObject'), t('pmapPprTblOee'), t('pmapPprTblAvail'), t('pmapPprTblPerf'), t('pmapPprTblMtbf'), t('pmapPprTblPpr')].map(h => (
+                      <th key={h} className="text-left px-3 py-2 text-[9px] uppercase tracking-widest text-muted-foreground font-semibold">{h}</th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody>
+                  {Object.values(STATION_MAINTENANCE).map((m, i) => {
+                    const oeeColor = m.oee.oee >= 80 ? '#22c55e' : m.oee.oee >= 70 ? '#f59e0b' : '#ef4444'
+                    return (
+                      <tr key={m.stationId}
+                        style={{ background: i % 2 === 0 ? 'transparent' : (isDark ? 'rgba(255,255,255,0.02)' : 'rgba(0,0,0,0.02)') }}>
+                        <td className="px-3 py-2 font-medium">{tt(m.repairs[0]?.stationName ?? m.stationId)}</td>
+                        <td className="px-3 py-2">
+                          <span className="font-bold" style={{ color: oeeColor }}>{m.oee.oee.toFixed(1)}%</span>
+                        </td>
+                        <td className="px-3 py-2 text-muted-foreground">{m.oee.availability}%</td>
+                        <td className="px-3 py-2 text-muted-foreground">{m.oee.performance}%</td>
+                        <td className="px-3 py-2 text-muted-foreground">{m.oee.mtbf}{t('npsUnitHours')}</td>
+                        <td className="px-3 py-2">
+                          <div className="flex items-center gap-1.5">
+                            <div className="flex-1 h-1.5 rounded-full bg-muted overflow-hidden">
+                              <div className="h-full rounded-full bg-indigo-500" style={{ width: `${m.ppr2026.pct}%` }} />
+                            </div>
+                            <span className="text-[9px] text-indigo-400 font-medium shrink-0">{m.ppr2026.pct}%</span>
+                          </div>
+                        </td>
+                      </tr>
+                    )
+                  })}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  )
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
    COMPONENT
    ═══════════════════════════════════════════════════════════════════════════ */
 export default function OilPipelineMap() {
   const { theme } = useTheme()
   const isDark = theme === 'dark'
+  const navigate = useNavigate()
+  const { t, translateData: tt, language } = useLanguage()
 
+  const [activeTab, setActiveTab] = useState<'map' | 'structure' | 'ppr'>('map')
   const [selectedRoute, setSelectedRoute] = useState<OilRoute | null>(null)
   const [selectedStation, setSelectedStation] = useState<NPS | null>(null)
   const [stations, setStations] = useState<NPS[]>(BASE_STATIONS)
@@ -282,35 +843,108 @@ export default function OilPipelineMap() {
         <div>
           <h1 className="text-xl font-bold tracking-tight flex items-center gap-2">
             <Droplets className="h-5 w-5 text-orange-500" />
-            Карта нефтепроводов АО «КазТрансОйл»
+            {t('pmapTitle')}
           </h1>
           <p className="text-sm text-muted-foreground mt-0.5">
-            Интерактивная схема — нажмите на трубопровод или ГНПС/НПС
+            {t('pmapSubtitle')}
           </p>
         </div>
         <div className="flex items-center gap-2 flex-wrap">
-          <span className="text-[10px] uppercase tracking-widest text-muted-foreground mr-1">Тип</span>
-          {(['all', 'export', 'domestic', 'import'] as const).map(t => (
-            <button key={t} onClick={() => setFilterType(t)}
-              className="px-3 py-1 rounded-full text-xs font-medium border transition-all"
-              style={{
-                background: filterType === t ? (isDark ? 'rgba(249,115,22,0.2)' : 'rgba(249,115,22,0.12)') : 'transparent',
-                borderColor: filterType === t ? '#f97316' : (isDark ? 'rgba(255,255,255,0.15)' : 'rgba(0,0,0,0.15)'),
-                color: filterType === t ? '#f97316' : undefined,
-              }}>
-              {t === 'all' ? 'Все' : t === 'export' ? 'Экспорт' : t === 'domestic' ? 'Внутренние' : 'Импорт'}
-            </button>
-          ))}
+          {/* Tab buttons */}
+          <div className="flex rounded-lg border overflow-hidden text-xs font-medium">
+            {([['map', t('pmapTabMap')], ['structure', t('pmapTabStructure')], ['ppr', t('pmapTabPpr')]] as const).map(([id, label]) => (
+              <button key={id} onClick={() => setActiveTab(id as 'map' | 'structure' | 'ppr')}
+                className="px-4 py-1.5 transition-colors"
+                style={{
+                  background: activeTab === id ? (id === 'ppr' ? '#6366f1' : '#f97316') : 'transparent',
+                  color: activeTab === id ? '#fff' : undefined,
+                }}>
+                {label}
+              </button>
+            ))}
+          </div>
+          {activeTab === 'map' && (
+            <>
+              <span className="text-[10px] uppercase tracking-widest text-muted-foreground ml-2 mr-1">{t('pmapFilterLabel')}</span>
+              {(['all', 'export', 'domestic', 'import'] as const).map(ft => (
+                <button key={ft} onClick={() => setFilterType(ft)}
+                  className="px-3 py-1 rounded-full text-xs font-medium border transition-all"
+                  style={{
+                    background: filterType === ft ? (isDark ? 'rgba(249,115,22,0.2)' : 'rgba(249,115,22,0.12)') : 'transparent',
+                    borderColor: filterType === ft ? '#f97316' : (isDark ? 'rgba(255,255,255,0.15)' : 'rgba(0,0,0,0.15)'),
+                    color: filterType === ft ? '#f97316' : undefined,
+                  }}>
+                  {ft === 'all' ? t('pmapFilterAll') : ft === 'export' ? t('pmapFilterExport') : ft === 'domestic' ? t('pmapFilterDomestic') : t('pmapFilterImport')}
+                </button>
+              ))}
+            </>
+          )}
         </div>
       </div>
+
+      {/* ══ STRUCTURE TAB ══ */}
+      {activeTab === 'structure' && (
+        <div className="space-y-4">
+          {/* Parent node */}
+          <div className="rounded-2xl border-2 p-5 text-center"
+            style={{ borderColor: '#3b82f6', background: isDark ? 'rgba(59,130,246,0.08)' : 'rgba(59,130,246,0.05)' }}>
+            <div className="flex items-center justify-center gap-2 mb-1">
+              <Building2 className="h-6 w-6 text-blue-500" />
+              <span className="text-xl font-bold text-blue-500">{tt(KTO_STRUCTURE.parent.name)}</span>
+            </div>
+            <div className="flex items-center justify-center gap-2 text-sm text-muted-foreground">
+              <Globe2 className="h-3.5 w-3.5" />
+              <span>{tt(KTO_STRUCTURE.parent.country)}</span>
+              <span>·</span>
+              <span>{t('pmapStructureSubsidiary')}</span>
+            </div>
+            <div className="mt-3 flex justify-center gap-4 flex-wrap">
+              {[
+                { label: t('pmapStructureLength'), val: `7 165 ${t('pmapUnitKm')}` },
+                { label: t('pmapStructureThroughput2024'), val: `80.7 ${t('pmapUnitMlnT')}` },
+                { label: t('pmapStructureNps'), val: language === 'en' ? '33 objects' : '33 объекта' },
+                { label: t('pmapStructureEmployees'), val: '≈ 7 500' },
+              ].map(({ label, val }) => (
+                <div key={label} className="text-center">
+                  <p className="text-[10px] text-muted-foreground">{label}</p>
+                  <p className="text-sm font-bold text-blue-500">{val}</p>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* Children */}
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+            {KTO_STRUCTURE.children.map(node => (
+              <StructureNode key={node.id}
+                node={node as Parameters<typeof StructureNode>[0]['node']}
+                isDark={isDark} />
+            ))}
+          </div>
+
+          {/* Note */}
+          <div className="rounded-lg border border-blue-500/20 bg-blue-500/5 p-3 text-[11px] text-muted-foreground">
+            {t('pmapStructureNote')}
+          </div>
+        </div>
+      )}
+
+      {/* ══ PPR / AI TAB ══ */}
+      {activeTab === 'ppr' && (
+        <PPRTab isDark={isDark} />
+      )}
+
+      {/* ══ MAP TAB ══ */}
+      {activeTab === 'map' && (
+      <>
 
       {/* KPI Strip */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
         {[
-          { label: 'Общая прокачка', value: `${totalVol.toFixed(1)} млн т/год`, icon: Droplets, color: '#f97316' },
-          { label: 'Экспортный объём', value: `${exportVol.toFixed(1)} млн т/год`, icon: ArrowRight, color: '#ef4444' },
-          { label: 'Протяжённость сети', value: '7 165 км', icon: Navigation, color: '#6366f1' },
-          { label: 'ГНПС/НПС в работе', value: `${stations.filter(s => s.status === 'ok').length}/${stations.length}`, icon: Gauge, color: '#22c55e' },
+          { label: t('pmapKpiTotal'),   value: `${totalVol.toFixed(1)} ${t('pmapUnitMlnYr')}`, icon: Droplets, color: '#f97316' },
+          { label: t('pmapKpiExport'),  value: `${exportVol.toFixed(1)} ${t('pmapUnitMlnYr')}`, icon: ArrowRight, color: '#ef4444' },
+          { label: t('pmapKpiNetwork'), value: `7 165 ${t('pmapUnitKm')}`, icon: Navigation, color: '#6366f1' },
+          { label: t('pmapKpiStations'), value: `${stations.filter(s => s.status === 'ok').length}/${stations.length}`, icon: Gauge, color: '#22c55e' },
         ].map(k => (
           <div key={k.label} className="rounded-xl border p-3"
             style={{ borderColor: `${k.color}30`, background: isDark ? `${k.color}0a` : `${k.color}07` }}>
@@ -333,7 +967,7 @@ export default function OilPipelineMap() {
           <div className="absolute top-3 left-3 z-10 flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[10px] font-semibold"
             style={{ background: isDark ? 'rgba(0,0,0,0.65)' : 'rgba(255,255,255,0.85)', color: '#22c55e', backdropFilter: 'blur(8px)' }}>
             <span className="h-1.5 w-1.5 rounded-full bg-green-400 animate-pulse" />
-            LIVE · {tick > 0 ? `обновл. ${tick * 4}с назад` : 'только что'}
+            {t('pmapLive')} · {tick > 0 ? t('pmapLiveAgoSecs').replace('{n}', String(tick * 4)) : t('pmapLiveJustNow')}
           </div>
 
           <ComposableMap
@@ -388,7 +1022,7 @@ export default function OilPipelineMap() {
                         fontWeight: city.major ? 700 : 500,
                         letterSpacing: 0.8,
                       }}>
-                      {city.name}
+                      {tt(city.name)}
                     </text>
                   </g>
                 )
@@ -503,7 +1137,7 @@ export default function OilPipelineMap() {
                       fontWeight: isCity ? 600 : 500,
                       letterSpacing: isCity ? 0.5 : 1.5,
                     }}>
-                    {name}
+                    {tt(name)}
                   </text>
                 )
               })}
@@ -534,22 +1168,22 @@ export default function OilPipelineMap() {
           {/* Легенда */}
           <div className="absolute bottom-3 left-3 rounded-lg px-3 py-2"
             style={{ background: isDark ? 'rgba(0,0,0,0.72)' : 'rgba(255,255,255,0.90)', backdropFilter: 'blur(8px)' }}>
-            <p className="text-[9px] uppercase tracking-widest text-muted-foreground mb-1.5 font-semibold">Легенда</p>
+            <p className="text-[9px] uppercase tracking-widest text-muted-foreground mb-1.5 font-semibold">{t('pmapLegendTitle')}</p>
             <div className="space-y-1">
               {ROUTES.map(r => (
                 <div key={r.id} className="flex items-center gap-1.5">
                   <span className="h-0.5 w-5 rounded-full" style={{ background: r.color, opacity: r.type === 'import' ? 0.6 : 1 }} />
                   <span className="text-[9px]" style={{ color: isDark ? '#c0d0d8' : '#2a4040' }}>
-                    {r.shortName} · {r.type === 'import' ? `${r.throughput} млн т` : `${r.throughput} млн т/год`}
+                    {r.shortName} · {r.type === 'import' ? `${r.throughput} ${t('pmapUnitMlnT')}` : `${r.throughput} ${t('pmapUnitMlnYr')}`}
                   </span>
                 </div>
               ))}
               <div className="border-t mt-1 pt-1" style={{ borderColor: isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.1)' }}>
                 {[
-                  { dot: 'gnps', color: '#22c55e', label: 'ГНПС (головная)' },
-                  { dot: 'nps', color: '#22c55e', label: 'НПС (перекачивающая)' },
-                  { dot: 'warn', color: '#f59e0b', label: 'Внимание' },
-                  { dot: 'maint', color: '#6366f1', label: 'ТО' },
+                  { dot: 'gnps', color: '#22c55e', label: t('pmapLegendGnps') },
+                  { dot: 'nps', color: '#22c55e', label: t('pmapLegendNps') },
+                  { dot: 'warn', color: '#f59e0b', label: t('pmapStatusWarn') },
+                  { dot: 'maint', color: '#6366f1', label: t('pmapStatusMaintShort') },
                 ].map(l => (
                   <div key={l.dot} className="flex items-center gap-1.5">
                     <span className="rounded-full" style={{
@@ -574,7 +1208,7 @@ export default function OilPipelineMap() {
               style={{ borderColor: palette.border, background: isDark ? 'rgba(255,255,255,0.03)' : 'rgba(0,0,0,0.02)' }}>
               <div className="flex-1 min-w-0">
                 <p className="text-xs font-bold leading-snug pr-2">
-                  {selectedRoute ? selectedRoute.name : selectedStation?.name}
+                  {selectedRoute ? tt(selectedRoute.name) : tt(selectedStation?.name ?? '')}
                 </p>
                 {selectedRoute && (
                   <div className="flex gap-1.5 mt-1.5 flex-wrap">
@@ -583,11 +1217,11 @@ export default function OilPipelineMap() {
                       {selectedRoute.shortName}
                     </Badge>
                     <Badge variant="outline" className="text-[9px]">
-                      {TYPE_LABEL[selectedRoute.type]}
+                      {t(TYPE_LABEL_KEY[selectedRoute.type])}
                     </Badge>
                     <Badge variant="outline" className="text-[9px]"
                       style={{ borderColor: STATUS_COLOR[selectedRoute.status] }}>
-                      {STATUS_LABEL[selectedRoute.status]}
+                      {t(STATUS_LABEL_KEY[selectedRoute.status])}
                     </Badge>
                   </div>
                 )}
@@ -595,10 +1229,10 @@ export default function OilPipelineMap() {
                   <div className="flex gap-1.5 mt-1.5">
                     <Badge className="text-[9px]"
                       style={{ background: STATUS_COLOR[selectedStation.status], color: '#fff' }}>
-                      {STATUS_LABEL[selectedStation.status]}
+                      {t(STATUS_LABEL_KEY[selectedStation.status])}
                     </Badge>
                     <Badge variant="outline" className="text-[9px]">
-                      {selectedStation.stationType === 'gnps' ? 'ГНПС' : selectedStation.stationType === 'terminal' ? 'Терминал' : 'НПС'}
+                      {selectedStation.stationType === 'gnps' ? t('pmapStationGnps') : selectedStation.stationType === 'terminal' ? t('pmapStationTerminal') : t('pmapStationNps')}
                     </Badge>
                   </div>
                 )}
@@ -614,10 +1248,10 @@ export default function OilPipelineMap() {
                 <>
                   <div className="grid grid-cols-2 gap-2">
                     {[
-                      { label: 'Прокачка', value: `${selectedRoute.throughput} млн т/год`, color: selectedRoute.color },
-                      { label: 'Мощность', value: `${selectedRoute.capacity} млн т/год`, color: '#6b7280' },
-                      { label: 'Давление', value: `${selectedRoute.pressure} МПа`, color: '#3b82f6' },
-                      { label: 'Протяжённость', value: `${selectedRoute.length.toLocaleString('ru-RU')} км`, color: '#8b5cf6' },
+                      { label: t('pmapDetailThroughput'), value: `${selectedRoute.throughput} ${t('pmapUnitMlnYr')}`, color: selectedRoute.color },
+                      { label: t('pmapDetailCapacity'),   value: `${selectedRoute.capacity} ${t('pmapUnitMlnYr')}`, color: '#6b7280' },
+                      { label: t('pmapDetailPressure'),   value: `${selectedRoute.pressure} ${t('pmapUnitMPa')}`, color: '#3b82f6' },
+                      { label: t('pmapDetailLength'),     value: `${selectedRoute.length.toLocaleString(language === 'en' ? 'en-GB' : 'ru-RU')} ${t('pmapUnitKm')}`, color: '#8b5cf6' },
                     ].map(m => (
                       <div key={m.label} className="rounded-lg border p-2.5"
                         style={{ borderColor: `${m.color}28`, background: isDark ? `${m.color}08` : `${m.color}06` }}>
@@ -629,7 +1263,7 @@ export default function OilPipelineMap() {
 
                   <div>
                     <div className="flex justify-between text-[10px] mb-1">
-                      <span className="text-muted-foreground">Загрузка мощности</span>
+                      <span className="text-muted-foreground">{t('pmapDetailLoad')}</span>
                       <span className="font-semibold">{((selectedRoute.throughput / selectedRoute.capacity) * 100).toFixed(0)}%</span>
                     </div>
                     <div className="h-2 rounded-full bg-muted overflow-hidden">
@@ -639,27 +1273,27 @@ export default function OilPipelineMap() {
                   </div>
 
                   <div className="space-y-1.5">
-                    <p className="text-[9px] uppercase tracking-widest text-muted-foreground font-semibold">Маршрут</p>
+                    <p className="text-[9px] uppercase tracking-widest text-muted-foreground font-semibold">{t('pmapDetailRoute')}</p>
                     <div className="flex items-center gap-1.5 text-xs">
                       <MapPin className="h-3 w-3 text-muted-foreground shrink-0" />
-                      <span className="font-medium">{selectedRoute.name.split('—')[0]?.trim()}</span>
+                      <span className="font-medium">{tt(selectedRoute.name.split('—')[0]?.trim() ?? '')}</span>
                       <ArrowRight className="h-3 w-3 text-muted-foreground shrink-0" />
-                      <span>{selectedRoute.dest}</span>
+                      <span>{tt(selectedRoute.dest)}</span>
                     </div>
                     <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
                       <Wrench className="h-3 w-3 shrink-0" />
-                      <span>Оператор: {selectedRoute.owner}</span>
+                      <span>{t('pmapDetailOperator')}: {tt(selectedRoute.owner)}</span>
                     </div>
                     <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
                       <Zap className="h-3 w-3 shrink-0" />
-                      <span>Год ввода: {selectedRoute.year}</span>
+                      <span>{t('pmapDetailYearStart')}: {tt(selectedRoute.year)}</span>
                     </div>
                   </div>
 
-                  <p className="text-[10px] text-muted-foreground leading-relaxed">{selectedRoute.description}</p>
+                  <p className="text-[10px] text-muted-foreground leading-relaxed">{tt(selectedRoute.description)}</p>
 
                   <div>
-                    <p className="text-[9px] uppercase tracking-widest text-muted-foreground font-semibold mb-2">ГНПС/НПС на маршруте</p>
+                    <p className="text-[9px] uppercase tracking-widest text-muted-foreground font-semibold mb-2">{t('pmapDetailStationsRoute')}</p>
                     <div className="space-y-1.5 max-h-40 overflow-y-auto">
                       {stations.filter(s => s.route_id === selectedRoute.id).map(s => (
                         <button key={s.id}
@@ -669,16 +1303,16 @@ export default function OilPipelineMap() {
                           <div className="flex items-center gap-2">
                             <span className="rounded-full shrink-0"
                               style={{ background: STATUS_COLOR[s.status], width: s.stationType === 'gnps' ? 8 : 5, height: s.stationType === 'gnps' ? 8 : 5, display: 'inline-block' }} />
-                            <span className="text-[10px] font-medium">{s.name}</span>
+                            <span className="text-[10px] font-medium">{tt(s.name)}</span>
                           </div>
-                          <span className="text-[10px] text-muted-foreground">{s.flow.toFixed(1)} млн т</span>
+                          <span className="text-[10px] text-muted-foreground">{s.flow.toFixed(1)} {t('pmapUnitMlnT')}</span>
                         </button>
                       ))}
                     </div>
                   </div>
 
                   <div>
-                    <p className="text-[9px] uppercase tracking-widest text-muted-foreground font-semibold mb-2">Динамика прокачки</p>
+                    <p className="text-[9px] uppercase tracking-widest text-muted-foreground font-semibold mb-2">{t('pmapPanelDynamics')}</p>
                     <ResponsiveContainer width="100%" height={80}>
                       <AreaChart data={THROUGHPUT_HISTORY}>
                         <defs>
@@ -701,12 +1335,12 @@ export default function OilPipelineMap() {
                 <>
                   <div className="grid grid-cols-2 gap-2">
                     {[
-                      { label: 'Расход', value: `${selectedStation.flow.toFixed(1)} млн т/год`, color: '#f97316' },
-                      { label: 'Загрузка', value: `${selectedStation.load_pct}%`, color: '#3b82f6' },
-                      { label: 'Давл. вход', value: `${selectedStation.pressure_in.toFixed(1)} МПа`, color: '#6b7280' },
-                      { label: 'Давл. выход', value: `${selectedStation.pressure_out.toFixed(2)} МПа`, color: '#22c55e' },
-                      { label: 'Насосы', value: `${selectedStation.pumps_active}/${selectedStation.pumps_total} акт.`, color: '#8b5cf6' },
-                      { label: 'Т° нефти', value: `${selectedStation.temp}°C`, color: '#f59e0b' },
+                      { label: t('pmapStationFlow'),     value: `${selectedStation.flow.toFixed(1)} ${t('pmapUnitMlnYr')}`, color: '#f97316' },
+                      { label: t('pmapStationLoad'),     value: `${selectedStation.load_pct}%`, color: '#3b82f6' },
+                      { label: t('pmapStationPressIn'),  value: `${selectedStation.pressure_in.toFixed(1)} ${t('pmapUnitMPa')}`, color: '#6b7280' },
+                      { label: t('pmapStationPressOut'), value: `${selectedStation.pressure_out.toFixed(2)} ${t('pmapUnitMPa')}`, color: '#22c55e' },
+                      { label: t('pmapStationPumps'),    value: `${selectedStation.pumps_active}/${selectedStation.pumps_total} ${t('pmapStationPumpsActive')}`, color: '#8b5cf6' },
+                      { label: t('pmapStationTemp'),     value: `${selectedStation.temp}°C`, color: '#f59e0b' },
                     ].map(m => (
                       <div key={m.label} className="rounded-lg border p-2.5"
                         style={{ borderColor: `${m.color}28`, background: isDark ? `${m.color}08` : `${m.color}06` }}>
@@ -718,7 +1352,7 @@ export default function OilPipelineMap() {
 
                   <div>
                     <div className="flex justify-between text-[10px] mb-1">
-                      <span className="text-muted-foreground">Загрузка станции</span>
+                      <span className="text-muted-foreground">{t('pmapStationLoadStation')}</span>
                       <span className="font-semibold">{selectedStation.load_pct}%</span>
                     </div>
                     <div className="h-2 rounded-full bg-muted overflow-hidden">
@@ -736,24 +1370,24 @@ export default function OilPipelineMap() {
                     <div className="rounded-lg border border-amber-500/40 bg-amber-500/10 p-3 flex items-start gap-2">
                       <AlertTriangle className="h-3.5 w-3.5 text-amber-400 shrink-0 mt-0.5" />
                       <p className="text-[10px] text-amber-400 leading-relaxed">
-                        Нагрузка на насосы превышает 90%. Рекомендуется технический осмотр.
+                        {t('pmapStationWarn')}
                       </p>
                     </div>
                   )}
 
                   <div className="space-y-1.5">
-                    <p className="text-[9px] uppercase tracking-widest text-muted-foreground font-semibold">Параметры</p>
+                    <p className="text-[9px] uppercase tracking-widest text-muted-foreground font-semibold">{t('pmapStationParams')}</p>
                     <div className="text-xs space-y-1">
                       <div className="flex justify-between">
-                        <span className="text-muted-foreground">Прокачка с начала года</span>
-                        <span className="font-medium">{selectedStation.throughput_ytd} млн т</span>
+                        <span className="text-muted-foreground">{t('pmapStationYTD')}</span>
+                        <span className="font-medium">{selectedStation.throughput_ytd} {t('pmapUnitMlnT')}</span>
                       </div>
                       <div className="flex justify-between">
-                        <span className="text-muted-foreground">Тип объекта</span>
-                        <span className="font-medium">{selectedStation.stationType === 'gnps' ? 'ГНПС' : selectedStation.stationType === 'terminal' ? 'Терминал' : 'НПС'}</span>
+                        <span className="text-muted-foreground">{t('pmapStationType')}</span>
+                        <span className="font-medium">{selectedStation.stationType === 'gnps' ? t('pmapStationGnps') : selectedStation.stationType === 'terminal' ? t('pmapStationTerminal') : t('pmapStationNps')}</span>
                       </div>
                       <div className="flex justify-between">
-                        <span className="text-muted-foreground">Трубопровод</span>
+                        <span className="text-muted-foreground">{t('pmapStationPipeline')}</span>
                         <span className="font-medium">{ROUTES.find(r => r.id === selectedStation.route_id)?.shortName}</span>
                       </div>
                     </div>
@@ -764,9 +1398,25 @@ export default function OilPipelineMap() {
                       ? <CheckCircle2 className="h-3.5 w-3.5 text-green-400" />
                       : <AlertTriangle className="h-3.5 w-3.5 text-amber-400" />}
                     <span style={{ color: STATUS_COLOR[selectedStation.status] }}>
-                      {STATUS_LABEL[selectedStation.status]}
+                      {t(STATUS_LABEL_KEY[selectedStation.status])}
                     </span>
                   </div>
+
+                  {/* OEE + PPR mini-panel */}
+                  {STATION_MAINTENANCE[selectedStation.id] && (
+                    <StationOEEPanel maintenance={STATION_MAINTENANCE[selectedStation.id]} isDark={isDark} />
+                  )}
+
+                  {/* Link to tech scheme */}
+                  {(selectedStation.stationType === 'gnps' || selectedStation.stationType === 'nps') && (
+                    <button
+                      onClick={() => navigate('/tech-scheme-kto')}
+                      className="w-full mt-1 flex items-center justify-center gap-2 rounded-lg border px-3 py-2 text-xs font-medium transition-colors hover:bg-muted/50"
+                      style={{ borderColor: '#3b82f680', color: '#3b82f6' }}>
+                      <ExternalLink className="h-3.5 w-3.5" />
+                      {t('pmapOpenTechScheme')}
+                    </button>
+                  )}
                 </>
               )}
             </div>
@@ -778,12 +1428,12 @@ export default function OilPipelineMap() {
           <div className="w-72 rounded-2xl border flex flex-col gap-4 p-4"
             style={{ borderColor: palette.border }}>
             <div>
-              <p className="text-xs font-bold mb-0.5">Сводка по сети КТО</p>
-              <p className="text-[10px] text-muted-foreground">Нажмите на трубопровод или ГНПС/НПС для деталей</p>
+              <p className="text-xs font-bold mb-0.5">{t('pmapPanelDefaultTitle')}</p>
+              <p className="text-[10px] text-muted-foreground">{t('pmapPanelDefaultHint')}</p>
             </div>
 
             <div className="space-y-2">
-              <p className="text-[9px] uppercase tracking-widest text-muted-foreground font-semibold">Трубопроводы</p>
+              <p className="text-[9px] uppercase tracking-widest text-muted-foreground font-semibold">{t('pmapPanelPipelines')}</p>
               {ROUTES.map(r => (
                 <button key={r.id}
                   onClick={() => setSelectedRoute(r)}
@@ -795,24 +1445,24 @@ export default function OilPipelineMap() {
                     <span className="text-[10px] font-medium">{r.shortName}</span>
                     {r.status === 'maint' && (
                       <Badge className="text-[8px] px-1 py-0"
-                        style={{ background: '#6366f110', color: '#6366f1', border: '1px solid #6366f140' }}>ТО</Badge>
+                        style={{ background: '#6366f110', color: '#6366f1', border: '1px solid #6366f140' }}>{t('pmapStatusMaintShort')}</Badge>
                     )}
                     {r.type === 'import' && (
                       <Badge className="text-[8px] px-1 py-0"
-                        style={{ background: '#6b728010', color: '#9ca3af', border: '1px solid #6b728040' }}>Импорт</Badge>
+                        style={{ background: '#6b728010', color: '#9ca3af', border: '1px solid #6b728040' }}>{t('pmapTypeImport')}</Badge>
                     )}
                   </div>
-                  <span className="text-[10px] text-muted-foreground">{r.throughput} M т</span>
+                  <span className="text-[10px] text-muted-foreground">{r.throughput} {t('pmapUnitMlnT')}</span>
                 </button>
               ))}
             </div>
 
             <div className="space-y-2">
-              <p className="text-[9px] uppercase tracking-widest text-muted-foreground font-semibold">Статус станций</p>
+              <p className="text-[9px] uppercase tracking-widest text-muted-foreground font-semibold">{t('pmapPanelStationsStatus')}</p>
               {[
-                { label: 'В работе', count: stations.filter(s => s.status === 'ok').length, color: '#22c55e' },
-                { label: 'Внимание', count: stations.filter(s => s.status === 'warn').length, color: '#f59e0b' },
-                { label: 'ТО', count: stations.filter(s => s.status === 'maint').length, color: '#6366f1' },
+                { label: t('pmapStatusOk'),          count: stations.filter(s => s.status === 'ok').length, color: '#22c55e' },
+                { label: t('pmapStatusWarn'),        count: stations.filter(s => s.status === 'warn').length, color: '#f59e0b' },
+                { label: t('pmapStatusMaintShort'),  count: stations.filter(s => s.status === 'maint').length, color: '#6366f1' },
               ].map(l => (
                 <div key={l.label} className="flex items-center justify-between text-xs">
                   <div className="flex items-center gap-2">
@@ -825,18 +1475,18 @@ export default function OilPipelineMap() {
             </div>
 
             <div>
-              <p className="text-[9px] uppercase tracking-widest text-muted-foreground font-semibold mb-2">Динамика прокачки</p>
+              <p className="text-[9px] uppercase tracking-widest text-muted-foreground font-semibold mb-2">{t('pmapPanelDynamics')}</p>
               <ResponsiveContainer width="100%" height={110}>
-                <AreaChart data={THROUGHPUT_HISTORY}>
+                <AreaChart data={THROUGHPUT_HISTORY.map(item => ({ ...item, month: tt(item.month) }))}>
                   <XAxis dataKey="month" tick={{ fontSize: 7.5 }} tickLine={false} axisLine={false} />
                   <YAxis tick={{ fontSize: 7.5 }} tickLine={false} axisLine={false} width={24} />
                   <CartesianGrid strokeDasharray="3 3"
                     stroke={isDark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.05)'} />
                   <Tooltip contentStyle={{ fontSize: 9 }} />
-                  <Area type="monotone" dataKey="ktk" stroke="#ef4444" fill="#ef444420" strokeWidth={1.5} dot={false} name="КТК" />
-                  <Area type="monotone" dataKey="as" stroke="#f59e0b" fill="#f59e0b15" strokeWidth={1.5} dot={false} name="А-С" />
-                  <Area type="monotone" dataKey="kkkm" stroke="#dc2626" fill="#dc262615" strokeWidth={1.5} dot={false} name="КККМ" />
-                  <Area type="monotone" dataKey="aka" stroke="#f97316" fill="#f9731615" strokeWidth={1.5} dot={false} name="АКА" />
+                  <Area type="monotone" dataKey="ktk" stroke="#ef4444" fill="#ef444420" strokeWidth={1.5} dot={false} name={language === 'en' ? 'CPC' : 'КТК'} />
+                  <Area type="monotone" dataKey="as" stroke="#f59e0b" fill="#f59e0b15" strokeWidth={1.5} dot={false} name={language === 'en' ? 'A-S' : 'А-С'} />
+                  <Area type="monotone" dataKey="kkkm" stroke="#dc2626" fill="#dc262615" strokeWidth={1.5} dot={false} name={language === 'en' ? 'KCP' : 'КККМ'} />
+                  <Area type="monotone" dataKey="aka" stroke="#f97316" fill="#f9731615" strokeWidth={1.5} dot={false} name={language === 'en' ? 'AKA' : 'АКА'} />
                 </AreaChart>
               </ResponsiveContainer>
             </div>
@@ -844,7 +1494,7 @@ export default function OilPipelineMap() {
             <div className="flex items-center gap-2 mt-auto pt-2 border-t"
               style={{ borderColor: palette.border }}>
               <Activity className="h-3.5 w-3.5 text-muted-foreground" />
-              <span className="text-[10px] text-muted-foreground">Данные обновляются в реальном времени</span>
+              <span className="text-[10px] text-muted-foreground">{t('pmapPanelDataLive')}</span>
             </div>
           </div>
         )}
@@ -854,7 +1504,7 @@ export default function OilPipelineMap() {
       <div>
         <p className="text-[10px] uppercase tracking-widest text-muted-foreground font-semibold mb-2">
           <BarChart3 className="inline h-3 w-3 mr-1" />
-          ГНПС — быстрый доступ
+          {t('pmapPanelStationsAccess')}
         </p>
         <div className="grid grid-cols-3 sm:grid-cols-5 lg:grid-cols-7 gap-2">
           {stations.filter(s => s.stationType === 'gnps').map(s => (
@@ -867,14 +1517,16 @@ export default function OilPipelineMap() {
               }}>
               <div className="flex items-center gap-1.5 mb-1">
                 <span className="h-2 w-2 rounded-full shrink-0" style={{ background: STATUS_COLOR[s.status] }} />
-                <span className="text-[9px] font-semibold truncate">{s.name.replace('ГНПС ', '').replace('ГОС ', '')}</span>
+                <span className="text-[9px] font-semibold truncate">{tt(s.name).replace(/^(ГНПС |ГОС |HPS |Tengiz HPS|Atyrau HPS|Caspii HPS|Mayak PS|Aktau Terminal)/, m => m.startsWith('ГНПС') || m.startsWith('ГОС') || m.startsWith('HPS') ? '' : m)}</span>
               </div>
-              <p className="text-[9px] text-muted-foreground">{s.flow.toFixed(1)} млн т</p>
-              <p className="text-[8px] text-muted-foreground">{s.pressure_out.toFixed(1)} МПа</p>
+              <p className="text-[9px] text-muted-foreground">{s.flow.toFixed(1)} {t('pmapUnitMlnT')}</p>
+              <p className="text-[8px] text-muted-foreground">{s.pressure_out.toFixed(1)} {t('pmapUnitMPa')}</p>
             </button>
           ))}
         </div>
       </div>
+      </>
+      )}
     </div>
   )
 }

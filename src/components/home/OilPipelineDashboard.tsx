@@ -58,11 +58,23 @@ function detectLang(t: string): VoiceLang {
 
 const tAi = (key: string) => {
   const map: Record<string, string> = {
-    labelRudnik: 'НПС / Трубопровод',
-    labelDispatch: 'Диспетчер КТО',
-    labelIncidents: 'Инциденты / Утечки',
-    placeholderAsk: 'Спросите о нефтепроводе...',
-    headerAI: 'AIgul — КазТрансОйл',
+    aiAssistantName:    'AIgul — КазТрансОйл',
+    aiAssistantSubtitle:'Цифровой оператор нефтепровода',
+    chatUser:           'Оператор',
+    inputHint:          'Введите вопрос и нажмите Enter или ⌘↵',
+    ragSources:         'Источники знаний',
+    ragScenarioRun:     'Запуск сценария',
+    scenarioNotSelected:'Сценарий не выбран',
+    runScenarioBtn:     'Запустить расчёт',
+    aiStopSpeech:       'Остановить',
+    aiReadAloud:        'Озвучить',
+    srcMasterData:      'Справочники',
+    srcGeology:         'Геология',
+    srcEntities:        'Объекты',
+    srcScenarios:       'Сценарии',
+    srcAnnualPlans:     'Годовой план',
+    srcResults:         'Результаты',
+    srcCrisis:          'Инциденты',
   }
   return map[key] ?? key
 }
@@ -139,7 +151,7 @@ export function OilPipelineDashboard() {
         </div>
 
         {/* Main grid */}
-        <div className="grid grid-cols-1 xl:grid-cols-[1fr_300px] gap-4">
+        <div className="grid grid-cols-1 xl:grid-cols-[1fr_450px] gap-4">
           <div className="space-y-4">
             {/* Pipeline status strip */}
             <div className="rounded-xl border p-4" style={{ borderColor: `${accent}20`, background: isDark ? `${accent}06` : `${accent}04` }}>

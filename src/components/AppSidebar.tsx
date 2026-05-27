@@ -24,14 +24,14 @@ const ICON_MAP: Record<string, React.ElementType> = {
   Route, Gauge, Droplets, Wind, Wrench, Flame,
 };
 
-const INDUSTRY_LABELS: Record<IndustryId, string> = {
-  energy:       'Энергетика',
-  upstream:     'Нефтегаз',
-  refinery:     'НПЗ',
-  mining:       'Горнодобыча',
-  pipeline:     'Трубопровод',
-  pipeline_oil: 'Нефтепроводы',
-  pipeline_gas: 'Газопроводы',
+const INDUSTRY_LABEL_KEYS: Record<IndustryId, string> = {
+  energy:       'industryEnergy',
+  upstream:     'industryUpstream',
+  refinery:     'industryRefinery',
+  mining:       'industryMining',
+  pipeline:     'industryPipeline',
+  pipeline_oil: 'industryPipelineOil',
+  pipeline_gas: 'industryPipelineGas',
 };
 
 export function AppSidebar() {
@@ -40,7 +40,7 @@ export function AppSidebar() {
   const [eventMgmtOpen, setEventMgmtOpen] = useState(false);
   const [assetsOpen, setAssetsOpen] = useState(false);
   const [adminFlag, setAdminFlag] = useState(isAdmin());
-  const { t } = useLanguage();
+  const { t, translateData: tt } = useLanguage();
   const { activeWorkspace } = useWorkspace();
   const { profile, getIndustryPack } = useCompanyProfile();
   const location = useLocation();
@@ -139,14 +139,14 @@ export function AppSidebar() {
               {profile.isConfigured && (
                 <div className="flex items-center gap-1 mt-0.5">
                   <span className="text-[10px] text-sidebar-foreground/60 truncate leading-tight">
-                    {profile.companyName}
+                    {tt(profile.companyName)}
                   </span>
                   <Badge
                     variant="outline"
                     className="text-[8px] px-1 py-0 h-3.5 leading-none shrink-0"
                     style={{ fontSize: '8px' }}
                   >
-                    {INDUSTRY_LABELS[profile.industry]}
+                    {t(INDUSTRY_LABEL_KEYS[profile.industry])}
                   </Badge>
                 </div>
               )}
@@ -176,7 +176,7 @@ export function AppSidebar() {
               activeClassName={activeLinkClass}
             >
               <IconComp className="h-4 w-4 shrink-0" />
-              {!collapsed && <span>{mod.label}</span>}
+              {!collapsed && <span>{tt(mod.label)}</span>}
             </NavLink>
           );
         })}
@@ -404,7 +404,7 @@ export function AppSidebar() {
           activeClassName={activeLinkClass}
         >
           <Settings className="h-4 w-4 shrink-0" />
-          {!collapsed && <span className="text-muted-foreground">Смена отрасли</span>}
+          {!collapsed && <span className="text-muted-foreground">{t("navChangeIndustry")}</span>}
         </NavLink>
       </div>
 
@@ -413,7 +413,7 @@ export function AppSidebar() {
         <div className="border-t border-sidebar-border px-4 py-3 space-y-1">
           {activeWorkspace && (
             <p className="text-[10px] text-sidebar-foreground/60 text-center leading-tight truncate font-medium">
-              {activeWorkspace.shortName ?? activeWorkspace.name}
+              {tt(activeWorkspace.shortName ?? activeWorkspace.name)}
             </p>
           )}
         </div>

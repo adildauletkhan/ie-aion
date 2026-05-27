@@ -716,10 +716,10 @@ function Model3DTab() {
   const detail = selected ? PUMP_DETAILS[selected] : null;
 
   return (
-    <div className="flex flex-col h-full min-h-0">
-      <div className="flex flex-1 min-h-0">
+    <div className="flex flex-col">
+      <div className="flex">
         {/* Left legend */}
-        <div className="w-52 shrink-0 border-r p-4 space-y-4 overflow-y-auto">
+        <div className="w-52 shrink-0 border-r p-4 space-y-4">
           <div>
             <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-2">НПС Кенкияк</p>
             <p className="text-xs text-muted-foreground">Кликните на агрегат для просмотра параметров</p>
@@ -796,23 +796,22 @@ function Model3DTab() {
 
 export default function MaintenancePage() {
   return (
-    <div className="flex flex-col h-full min-h-0">
+    <div className="flex flex-col">
       {/* Header */}
-      <div className="px-6 pt-5 pb-4 border-b bg-background shrink-0">
+      <div className="pb-4 border-b mb-0">
         <h1 className="text-2xl font-bold tracking-tight">ТО и ремонты</h1>
         <p className="text-sm text-muted-foreground mt-1">
           ППР, диагностика и предиктивное обслуживание оборудования КазТрансОйл
         </p>
       </div>
 
-      <Tabs defaultValue="ppr" className="flex flex-col flex-1 min-h-0">
-        <div className="px-6 border-b bg-background shrink-0">
+      <Tabs defaultValue="ppr" className="flex flex-col">
+        <div className="border-b">
           <TabsList className="h-auto p-0 bg-transparent gap-0 rounded-none">
             {[
-              { id: "ppr",        icon: Calendar,   label: "ППР"                          },
-              { id: "equipment",  icon: Gauge,       label: "Состояние оборудования"       },
-              { id: "predictive", icon: TrendingUp,  label: "Предиктивная модель"          },
-              { id: "model3d",    icon: Box,         label: "3D Модель НПС"                },
+              { id: "ppr",        icon: Calendar,   label: "ППР"                    },
+              { id: "equipment",  icon: Gauge,       label: "Состояние оборудования" },
+              { id: "predictive", icon: TrendingUp,  label: "Предиктивная модель"    },
             ].map(({ id, icon: Icon, label }) => (
               <TabsTrigger
                 key={id} value={id}
@@ -825,10 +824,9 @@ export default function MaintenancePage() {
           </TabsList>
         </div>
 
-        <TabsContent value="ppr"        className="flex-1 overflow-auto m-0 p-0"><PPRTab /></TabsContent>
-        <TabsContent value="equipment"  className="flex-1 overflow-auto m-0 p-0"><EquipmentStatusTab /></TabsContent>
-        <TabsContent value="predictive" className="flex-1 overflow-auto m-0 p-0"><PredictiveTab /></TabsContent>
-        <TabsContent value="model3d"    className="flex-1 min-h-0 m-0 p-0 flex flex-col"><Model3DTab /></TabsContent>
+        <TabsContent value="ppr"        className="m-0 p-0"><PPRTab /></TabsContent>
+        <TabsContent value="equipment"  className="m-0 p-0"><EquipmentStatusTab /></TabsContent>
+        <TabsContent value="predictive" className="m-0 p-0"><PredictiveTab /></TabsContent>
       </Tabs>
     </div>
   );

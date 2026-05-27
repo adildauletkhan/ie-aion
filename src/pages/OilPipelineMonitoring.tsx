@@ -99,11 +99,12 @@ export default function OilPipelineMonitoring() {
       </div>
 
       <Tabs defaultValue="stations">
-        <TabsList className="grid w-full grid-cols-4">
+        <TabsList className="grid w-full grid-cols-5">
           <TabsTrigger value="stations">НПС — статус</TabsTrigger>
           <TabsTrigger value="flow">Расход нефти</TabsTrigger>
           <TabsTrigger value="pressure">Давление</TabsTrigger>
           <TabsTrigger value="incidents">Инциденты</TabsTrigger>
+          <TabsTrigger value="map">Схема МТ</TabsTrigger>
         </TabsList>
 
         {/* ── NPS Status ─────────────────────────────────────────────────── */}
@@ -268,6 +269,256 @@ export default function OilPipelineMonitoring() {
                 <p className="text-xl font-bold mt-1" style={{ color: s.color }}>{s.value}</p>
               </div>
             ))}
+          </div>
+        </TabsContent>
+        {/* ── Map tab ─────────────────────────────────────────────────────── */}
+        <TabsContent value="map" className="pt-4">
+          <div className="flex items-center justify-between mb-3 flex-wrap gap-2">
+            <div>
+              <h2 className="text-sm font-bold">Схема движения нефти по МТ КТО</h2>
+              <p className="text-[10px] text-muted-foreground">Анимация отражает фактическое направление и интенсивность потоков</p>
+            </div>
+            <div className="flex items-center gap-3 text-[10px] text-muted-foreground flex-wrap">
+              {[
+                { c: '#ef4444', l: 'КТК · 38 млн т' },
+                { c: '#f59e0b', l: 'А-С · 15 млн т' },
+                { c: '#f97316', l: 'АКА · 10 млн т' },
+                { c: '#dc2626', l: 'КККМ · 12 млн т' },
+                { c: '#6366f1', l: 'П-Ш · 8 млн т' },
+                { c: '#8b5cf6', l: 'У-А · 4 млн т' },
+                { c: '#6b7280', l: 'О-П (импорт)' },
+              ].map(({ c, l }) => (
+                <div key={l} className="flex items-center gap-1">
+                  <span className="h-0.5 w-6 rounded-full inline-block" style={{ background: c }} />
+                  <span>{l}</span>
+                </div>
+              ))}
+            </div>
+          </div>
+          <div className="rounded-xl border overflow-hidden" style={{ background: isDark ? '#0b1120' : '#e8f0f8' }}>
+          {/* ── GEOGRAPHIC MAP SVG ──
+              Projection: x = (lon-36)/48*1340+30   lon range [36,84]
+                          y = (56-lat)/16*460+15    lat range [40,56]
+              Key anchors:
+              Atyrau  (51.9,47.1) → 474,271   Aktobe  (57.2,50.3) → 622,179
+              Atasu   (71.6,48.6) → 1024,228  Pavlodar(77.0,52.3) → 1175,121
+              Almaty  (76.9,43.3) → 1171,380  Alashankou(82.6,45.4)→1331,320
+          ── */}
+          <svg viewBox="0 0 1400 500" style={{ width: '100%', height: 'auto', display: 'block' }}>
+            <style>{`
+              .f1 { animation: f1 2.0s linear infinite; }
+              .f2 { animation: f2 2.5s linear infinite; }
+              .f3 { animation: f3 3.0s linear infinite; }
+              .f4 { animation: f4 2.2s linear infinite; }
+              .f5 { animation: f5 3.5s linear infinite; }
+              .f6 { animation: f6 4.0s linear infinite; }
+              @keyframes f1 { from{stroke-dashoffset:30}to{stroke-dashoffset:0} }
+              @keyframes f2 { from{stroke-dashoffset:30}to{stroke-dashoffset:0} }
+              @keyframes f3 { from{stroke-dashoffset:30}to{stroke-dashoffset:0} }
+              @keyframes f4 { from{stroke-dashoffset:30}to{stroke-dashoffset:0} }
+              @keyframes f5 { from{stroke-dashoffset:30}to{stroke-dashoffset:0} }
+              @keyframes f6 { from{stroke-dashoffset:30}to{stroke-dashoffset:0} }
+              .pls { animation: pls 2s ease-in-out infinite; }
+              @keyframes pls { 0%,100%{r:9;opacity:1}50%{r:13;opacity:0.6} }
+            `}</style>
+
+            {/* ── BACKGROUND ── */}
+            <rect width={1400} height={500} fill={isDark ? '#07101e' : '#cfe4f2'} />
+
+            {/* ── KAZAKHSTAN TERRITORY (filled polygon, plotted from real lat/lon) ──
+                Projection: x=(lon-36)/48*1340+30  y=(56-lat)/16*460+15
+                Border points (clockwise from NW): */}
+            <polygon
+              points="449,144 532,116 672,87 811,73 923,44 1063,44 1202,87 1314,144 1342,216 1342,331 1314,389 1230,418 1063,446 895,446 811,475 645,461 532,446 477,418 463,360 435,303 463,274 449,188"
+              fill={isDark ? 'rgba(22,56,110,0.45)' : 'rgba(195,225,248,0.65)'}
+              stroke={isDark ? 'rgba(100,160,255,0.55)' : 'rgba(60,120,200,0.55)'}
+              strokeWidth={2}
+            />
+
+            {/* ── RUSSIA ZONE (above KZ border) ── */}
+            <text x={55} y={38} fontSize={12} fill={isDark ? 'rgba(148,163,184,0.5)' : 'rgba(70,90,130,0.5)'}
+              fontWeight={700} letterSpacing={3}>РОССИЯ</text>
+            <text x={820} y={32} fontSize={12} fill={isDark ? 'rgba(148,163,184,0.5)' : 'rgba(70,90,130,0.5)'}
+              fontWeight={700} letterSpacing={3}>РОССИЯ</text>
+            <line x1={0} y1={44} x2={923} y2={44} stroke={isDark ? 'rgba(148,163,184,0.15)' : 'rgba(70,90,130,0.2)'} strokeWidth={1} strokeDasharray="5,4" />
+
+            {/* ── CHINA ZONE (right of border) ── */}
+            <text x={1348} y={270} fontSize={11} fill={isDark ? 'rgba(220,38,38,0.55)' : 'rgba(180,50,50,0.5)'}
+              fontWeight={700} letterSpacing={2} transform="rotate(90,1348,270)">КИТАЙ</text>
+
+            {/* ── CENTRAL ASIA (south of KZ border) ── */}
+            <text x={680} y={492} textAnchor="middle" fontSize={10}
+              fill={isDark ? 'rgba(148,163,184,0.28)' : 'rgba(80,100,130,0.35)'}
+              fontWeight={700} letterSpacing={2}>ЦЕНТРАЛЬНАЯ АЗИЯ</text>
+
+            {/* ── КАЗАХСТАН label (center of territory) ── */}
+            <text x={840} y={248} textAnchor="middle" fontSize={16}
+              fill={isDark ? 'rgba(100,160,255,0.18)' : 'rgba(40,100,200,0.14)'}
+              fontWeight={900} letterSpacing={5}>КАЗАХСТАН</text>
+
+            {/* ── CASPIAN SEA ── */}
+            <ellipse cx={395} cy={405} rx={55} ry={108}
+              fill={isDark ? 'rgba(37,99,235,0.18)' : 'rgba(59,130,246,0.22)'}
+              stroke={isDark ? 'rgba(99,162,255,0.28)' : 'rgba(59,130,246,0.38)'} strokeWidth={1.5} />
+            <text x={395} y={398} textAnchor="middle" fontSize={8}
+              fill={isDark ? 'rgba(99,162,255,0.55)' : 'rgba(37,99,235,0.6)'}
+              fontStyle="italic" fontWeight={700}>КАСПИЙСКОЕ</text>
+            <text x={395} y={410} textAnchor="middle" fontSize={8}
+              fill={isDark ? 'rgba(99,162,255,0.55)' : 'rgba(37,99,235,0.6)'}
+              fontStyle="italic" fontWeight={700}>МОРЕ</text>
+
+            {/* ══════════════════════════════════════════
+                PIPELINES  (new geographic coordinates)
+                x=(lon-36)/48*1340+30  y=(56-lat)/16*460+15
+                ══════════════════════════════════════════ */}
+
+            {/* КТК (~38 млн т/г): Тенгиз(519,300)→Атырау(474,271)→NW→Новороссийск(80,340) */}
+            <polyline points="519,300 474,271 430,268 360,275 280,285 190,312 128,330 80,340"
+              fill="none" stroke="#ef4444" strokeWidth={5.5} strokeOpacity={0.75}
+              strokeLinecap="round" strokeLinejoin="round" />
+            <polyline points="519,300 474,271 430,268 360,275 280,285 190,312 128,330 80,340"
+              fill="none" stroke="#ef4444" strokeWidth={3.5} strokeDasharray="12,22"
+              className="f1" strokeLinecap="round" />
+
+            {/* А-С (~15 млн т/г): Атырау(474,271)→Уральск(454,153)→Самара(426,95) */}
+            <polyline points="474,271 464,215 454,153 439,122 426,95"
+              fill="none" stroke="#f59e0b" strokeWidth={4} strokeOpacity={0.8}
+              strokeLinecap="round" strokeLinejoin="round" />
+            <polyline points="474,271 464,215 454,153 439,122 426,95"
+              fill="none" stroke="#f59e0b" strokeWidth={2.5} strokeDasharray="10,22"
+              className="f2" strokeLinecap="round" />
+
+            {/* АКА (~10 млн т/г): Атырау→Актобе(622,179)→Кенкияк(689,225)→Кумколь(854,337)→Атасу(1024,228) */}
+            <polyline points="474,271 550,238 622,179 700,202 762,270 854,337 942,282 1024,228"
+              fill="none" stroke="#f97316" strokeWidth={4} strokeOpacity={0.75}
+              strokeLinecap="round" strokeLinejoin="round" />
+            <polyline points="474,271 550,238 622,179 700,202 762,270 854,337 942,282 1024,228"
+              fill="none" stroke="#f97316" strokeWidth={2.5} strokeDasharray="10,22"
+              className="f3" strokeLinecap="round" />
+
+            {/* КККМ (~12 млн т/г): Атасу(1024,228)→Алматы(1171,380)→Алашанькоу(1331,320)→Китай */}
+            <polyline points="1024,228 1090,268 1171,380 1255,352 1331,320 1385,305"
+              fill="none" stroke="#dc2626" strokeWidth={5} strokeOpacity={0.8}
+              strokeLinecap="round" strokeLinejoin="round" />
+            <polyline points="1024,228 1090,268 1171,380 1255,352 1331,320 1385,305"
+              fill="none" stroke="#dc2626" strokeWidth={3} strokeDasharray="12,22"
+              className="f4" strokeLinecap="round" />
+
+            {/* П-Ш (~8 млн т/г): Павлодар(1175,121)→Астана(1021,153)→Атасу(1024,228)→Кумколь(854,337)→Шымкент(966,409) */}
+            <polyline points="1175,121 1095,138 1021,153 1024,228 942,282 854,337 908,373 966,409"
+              fill="none" stroke="#6366f1" strokeWidth={4.5} strokeOpacity={0.75}
+              strokeLinecap="round" strokeLinejoin="round" />
+            <polyline points="1175,121 1095,138 1021,153 1024,228 942,282 854,337 908,373 966,409"
+              fill="none" stroke="#6366f1" strokeWidth={2.5} strokeDasharray="10,22"
+              className="f5" strokeLinecap="round" />
+
+            {/* О-П (импорт ~3 млн т/г): Омск(1074,44)→Павлодар(1175,121) */}
+            <polyline points="1074,44 1122,82 1175,121"
+              fill="none" stroke="#6b7280" strokeWidth={3} strokeOpacity={0.65}
+              strokeDasharray="8,7" strokeLinecap="round" />
+
+            {/* У-А (~4 млн т/г): Узень(500,380)→Актау(454,369) */}
+            <polyline points="500,380 476,375 454,369"
+              fill="none" stroke="#8b5cf6" strokeWidth={4} strokeOpacity={0.8}
+              strokeLinecap="round" strokeLinejoin="round" />
+            <polyline points="500,380 476,375 454,369"
+              fill="none" stroke="#8b5cf6" strokeWidth={2.5} strokeDasharray="10,22"
+              className="f6" strokeLinecap="round" />
+
+            {/* Актау→Батуми (морской маршрут, Каспий→Чёрное море) */}
+            <polyline points="454,369 388,378 318,388 255,408 189,429"
+              fill="none" stroke="#10b981" strokeWidth={2.5} strokeDasharray="7,6"
+              strokeOpacity={0.75} strokeLinecap="round" />
+
+            {/* ══════════════════════════════════════
+                PIPELINE LABELS
+                ══════════════════════════════════════ */}
+            <text x={230} y={305} fontSize={9.5} fill="#ef4444" fontWeight={700} transform="rotate(-3,230,305)">КТК</text>
+            <text x={455} y={210} fontSize={9} fill="#f59e0b" fontWeight={700} transform="rotate(-82,455,210)">А-С</text>
+            <text x={636} y={207} fontSize={9} fill="#f97316" fontWeight={700} transform="rotate(-12,636,207)">АКА</text>
+            <text x={1098} y={294} fontSize={9} fill="#dc2626" fontWeight={700} transform="rotate(-22,1098,294)">КККМ</text>
+            <text x={960} y={305} fontSize={9} fill="#6366f1" fontWeight={700} transform="rotate(75,960,305)">П-Ш</text>
+            <text x={1085} y={66} fontSize={8.5} fill="#6b7280">О-П (имп.)</text>
+            <text x={478} y={368} fontSize={8.5} fill="#8b5cf6" fontWeight={700}>У-А</text>
+            <text x={298} y={404} fontSize={8} fill="#10b981" transform="rotate(-8,298,404)">Море</text>
+
+            {/* ══════════════════════════════════════
+                CITY NODES
+                ══════════════════════════════════════ */}
+            {([
+              [426,  95,  'САМАРА',           '#f59e0b', true ],
+              [801,  95,  'КОСТАНАЙ',         '#94a3b8', false],
+              [957,  47,  'ПЕТРОПАВЛОВСК',    '#94a3b8', false],
+              [1074, 44,  'ОМСК',             '#6b7280', false],
+              [454,  153, 'УРАЛЬСК',          '#f59e0b', true ],
+              [622,  179, 'АКТОБЕ',           '#f97316', true ],
+              [1021, 153, 'АСТАНА',           '#6366f1', true ],
+              [1175, 121, 'ПАВЛОДАР',         '#6366f1', true ],
+              [454,  369, 'АКТАУ',            '#8b5cf6', true ],
+              [500,  380, 'УЗЕНЬ',            '#8b5cf6', false],
+              [474,  271, 'АТЫРАУ',           '#ef4444', true ],
+              [519,  300, 'ТЕНГИЗ',           '#ef4444', false],
+              [689,  225, 'КЕНКИЯК',          '#f97316', false],
+              [854,  337, 'КУМКОЛЬ',          '#f97316', true ],
+              [862,  337, 'КЫЗЫЛОРДА',        '#6366f1', false],
+              [1024, 228, 'АТАСУ',            '#dc2626', true ],
+              [966,  409, 'ШЫМКЕНТ',          '#6366f1', true ],
+              [1171, 380, 'АЛМАТЫ',           '#94a3b8', true ],
+            ] as [number, number, string, string, boolean][]).map(([x, y, name, color, large]) => (
+              <g key={name}>
+                <circle cx={x} cy={y} r={large ? 5 : 3.5} fill={color} fillOpacity={0.9} />
+                <text x={x} y={y - 9} textAnchor="middle"
+                  fontSize={large ? 9.5 : 8} fill={color} fontWeight={large ? 600 : 400}>{name}</text>
+              </g>
+            ))}
+
+            {/* ── KEY GNPS (pulsing rings) ── */}
+            {([
+              [474,  271, '#ef4444', 'gnps-atyrau'   ],
+              [1024, 228, '#dc2626', 'gnps-atasu'    ],
+              [1175, 121, '#6366f1', 'gnps-pavlodar' ],
+              [622,  179, '#f97316', 'gnps-aktobe'   ],
+            ] as [number, number, string, string][]).map(([cx, cy, c, key]) => (
+              <g key={key}>
+                <circle cx={cx} cy={cy} r={11} fill={c} fillOpacity={0.1} />
+                <circle cx={cx} cy={cy} r={7}  fill={c} fillOpacity={0.22} className="pls" />
+                <circle cx={cx} cy={cy} r={4.5} fill={c} />
+                <circle cx={cx} cy={cy} r={2}   fill={isDark ? '#07101e' : '#fff'} />
+              </g>
+            ))}
+
+            {/* ── TERMINAL BADGES ── */}
+            <rect x={24} y={330} width={56} height={18} rx={4}
+              fill="#ef4444" fillOpacity={0.22} stroke="#ef4444" strokeWidth={1} />
+            <text x={52} y={342} textAnchor="middle" fontSize={7.5} fill="#ef4444" fontWeight={600}>Новороссийск</text>
+
+            <rect x={155} y={420} width={46} height={18} rx={4}
+              fill="#10b981" fillOpacity={0.22} stroke="#10b981" strokeWidth={1} />
+            <text x={178} y={432} textAnchor="middle" fontSize={7.5} fill="#10b981" fontWeight={600}>Батуми</text>
+
+            <rect x={1348} y={297} width={48} height={18} rx={4}
+              fill="#dc2626" fillOpacity={0.2} stroke="#dc2626" strokeWidth={1} />
+            <text x={1372} y={309} textAnchor="middle" fontSize={7.5} fill="#dc2626" fontWeight={600}>→ Китай</text>
+
+            {/* ── SUMMARY BOX ── */}
+            <rect x={1078} y={408} width={295} height={80} rx={10}
+              fill={isDark ? 'rgba(7,16,30,0.93)' : 'rgba(255,255,255,0.93)'}
+              stroke={isDark ? '#1e3a5f' : '#c8daf0'} strokeWidth={1.5} />
+            <text x={1225} y={428} textAnchor="middle" fontSize={10}
+              fill={isDark ? '#94a3b8' : '#64748b'} fontWeight={700}>Сводка КТО</text>
+            {[
+              ['Общая прокачка:', '80.7 млн т/год', '#f97316'],
+              ['Экспорт:', '65.1 млн т/год', '#ef4444'],
+              ['Внутр. + импорт:', '15.6 млн т/год', '#6366f1'],
+            ].map(([label, val, color], i) => (
+              <g key={label}>
+                <text x={1090} y={446 + i * 15} fontSize={9}
+                  fill={isDark ? '#94a3b8' : '#64748b'}>{label}</text>
+                <text x={1363} y={446 + i * 15} textAnchor="end" fontSize={9}
+                  fill={color} fontWeight={700}>{val}</text>
+              </g>
+            ))}
+          </svg>
           </div>
         </TabsContent>
       </Tabs>

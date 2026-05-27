@@ -44,6 +44,9 @@ import MiningCrisis from "./pages/MiningCrisis";
 import OilPipelineMap from "./pages/OilPipelineMap";
 import GasPipelineMap from "./pages/GasPipelineMap";
 import OilPipelineMonitoring from "./pages/OilPipelineMonitoring";
+import TechSchemeKTO from "./pages/TechSchemeKTO";
+import CompanyDailyBriefing from "./pages/CompanyDailyBriefing";
+import IntegrityManagementPage from "./pages/IntegrityManagementPage";
 import GasPipelineMonitoring from "./pages/GasPipelineMonitoring";
 import { OnboardingGuard } from "./components/OnboardingGuard";
 import { AdminGuard } from "./components/AdminGuard";
@@ -129,6 +132,10 @@ const App = () => (
                     <Route path="/oil-pipeline-map" element={<OilPipelineMap />} />
                     <Route path="/gas-pipeline-map" element={<GasPipelineMap />} />
                     <Route path="/oil-pipeline-monitoring" element={<OilPipelineMonitoring />} />
+                    <Route path="/tech-scheme-kto" element={<TechSchemeKTO />} />
+                    <Route path="/daily-briefing" element={<CompanyDailyBriefing />} />
+                    <Route path="/daily-briefing/:nodeId" element={<CompanyDailyBriefing />} />
+                    <Route path="/integrity-management" element={<IntegrityManagementPage />} />
                     <Route path="/gas-pipeline-monitoring" element={<GasPipelineMonitoring />} />
                     <Route path="/oil-pipeline-dispatch" element={<OilPipelineMonitoring />} />
                     <Route path="/oil-pipeline-incidents" element={<OilPipelineMonitoring />} />

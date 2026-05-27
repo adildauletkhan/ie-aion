@@ -18,6 +18,9 @@ export const pipelineOilPack: IndustryPack = {
   modules: [
     { id: 'dashboard',        label: 'Главная',                icon: 'LayoutDashboard', route: '/'                        },
     { id: 'pipeline_map',     label: 'Схема нефтепроводов',    icon: 'Route',           route: '/oil-pipeline-map'        },
+    { id: 'tech_scheme_kto',  label: 'Техн. схема КТО',        icon: 'Workflow',        route: '/tech-scheme-kto'          },
+    { id: 'daily_briefing',   label: 'Суточная сводка АО',     icon: 'FileText',        route: '/daily-briefing'          },
+    { id: 'integrity',        label: 'Управление целостностью', icon: 'Shield',          route: '/integrity-management'     },
     { id: 'monitoring',       label: 'Мониторинг потоков',      icon: 'Gauge',           route: '/oil-pipeline-monitoring' },
     { id: 'dispatching',      label: 'Диспетчерский центр',    icon: 'Activity',        route: '/oil-pipeline-dispatch'   },
     { id: 'production_plan',  label: 'Производственный план',  icon: 'FileBarChart2',   route: '/production-plan'         },
