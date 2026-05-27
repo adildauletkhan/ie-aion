@@ -111,19 +111,34 @@ def update_user(
 
 
 # --- Change user password ---
+MIN_PASSWORD_LENGTH = 6
+
+
 class ChangePasswordRequest(BaseModel):
     new_password: str
 
 
-@router.post("/users/{user_id}/change-password", status_code=status.HTTP_200_OK)
+@router.post(
+    "/users/{user_id}/change-password",
+    status_code=status.HTTP_200_OK,
+    dependencies=[Depends(require_admin)],
+)
 def change_user_password(
     user_id: int,
     body: ChangePasswordRequest,
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
-    if len(body.new_password) < 6:
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Пароль должен содержать минимум 6 символов")
+    """Сменить пароль произвольного пользователя. Доступно только админам.
+
+    `require_admin` уже навешан на сам роутер, но дублируем зависимость на endpoint,
+    чтобы условие «только admin» сохранялось даже при будущем рефакторинге роутера.
+    """
+    if len(body.new_password) < MIN_PASSWORD_LENGTH:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"Пароль должен содержать минимум {MIN_PASSWORD_LENGTH} символов",
+        )
     user = user_crud.get_by_id(db, user_id)
     if not user:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User not found")

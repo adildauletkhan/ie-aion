@@ -15,7 +15,8 @@ import {
 } from "@/components/ui/dialog";
 import { useNavigate } from "react-router-dom";
 import { useLanguage } from "@/hooks/useLanguage";
-import { getAuthHeader, clearAuthCredentials } from "@/lib/auth";
+import { getAuthHeader, clearAuthCredentials, saveAuthCredentials, getStoredUser } from "@/lib/auth";
+import { toast } from "sonner";
 import {
   Users,
   Shield,
@@ -165,10 +166,12 @@ export default function AdminPage() {
   const [matrixSaving, setMatrixSaving] = useState<Record<number, boolean>>({});
   const [matrixLoaded, setMatrixLoaded] = useState(false);
 
-  const authHeader = getAuthHeader();
-  const headers = {
-    "Content-Type": "application/json",
-    ...(authHeader ? { Authorization: authHeader } : {}),
+  const buildHeaders = (): HeadersInit => {
+    const authHeader = getAuthHeader();
+    return {
+      "Content-Type": "application/json",
+      ...(authHeader ? { Authorization: authHeader } : {}),
+    };
   };
 
   const setLoadError = async (res: Response, fallback: string) => {
@@ -196,39 +199,39 @@ export default function AdminPage() {
   };
 
   const loadUsers = async () => {
-    const res = await fetch(`${getApiBase()}/admin/users`, { headers });
+    const res = await fetch(`${getApiBase()}/admin/users`, { headers: buildHeaders() });
     if (res.ok) setUsers(await res.json());
     else await setLoadError(res, t("adminErrorLoad"));
   };
   const loadRoles = async () => {
-    const res = await fetch(`${getApiBase()}/admin/roles`, { headers });
+    const res = await fetch(`${getApiBase()}/admin/roles`, { headers: buildHeaders() });
     if (res.ok) setRoles(await res.json());
     else await setLoadError(res, t("adminErrorLoad"));
   };
   const loadCompanies = async () => {
-    const res = await fetch(`${getApiBase()}/admin/companies`, { headers });
+    const res = await fetch(`${getApiBase()}/admin/companies`, { headers: buildHeaders() });
     if (res.ok) setCompanies(await res.json());
     else await setLoadError(res, t("adminErrorLoad"));
   };
   const loadActivityLogs = async () => {
-    const res = await fetch(`${getApiBase()}/activity/logs?limit=500`, { headers });
+    const res = await fetch(`${getApiBase()}/activity/logs?limit=500`, { headers: buildHeaders() });
     if (res.ok) setActivityLogs(await res.json());
     else await setLoadError(res, t("adminErrorLoad"));
   };
   const loadActivityStats = async () => {
     try {
-      const res = await fetch(`${getApiBase()}/activity/stats`, { headers });
+      const res = await fetch(`${getApiBase()}/activity/stats`, { headers: buildHeaders() });
       if (res.ok) setActivityStats(await res.json());
     } catch { /* ignore */ }
   };
   const loadSystemStats = async () => {
-    const res = await fetch(`${getApiBase()}/admin/system-stats`, { headers });
+    const res = await fetch(`${getApiBase()}/admin/system-stats`, { headers: buildHeaders() });
     if (res.ok) setSystemStats(await res.json());
     else await setLoadError(res, t("adminErrorLoad"));
   };
 
   const loadAllWorkspaces = async () => {
-    const res = await fetch(`${getApiBase()}/admin/workspaces`, { headers });
+    const res = await fetch(`${getApiBase()}/admin/workspaces`, { headers: buildHeaders() });
     if (res.ok) setAllWorkspaces(await res.json());
   };
 
@@ -236,7 +239,7 @@ export default function AdminPage() {
     if (!userList.length || !wsList.length) return;
     const entries = await Promise.all(
       userList.map(async (u) => {
-        const res = await fetch(`${getApiBase()}/admin/users/${u.id}/workspaces`, { headers });
+        const res = await fetch(`${getApiBase()}/admin/users/${u.id}/workspaces`, { headers: buildHeaders() });
         const data: WorkspaceAssignment[] = res.ok ? await res.json() : [];
         return [u.id, data] as [number, WorkspaceAssignment[]];
       })
@@ -274,7 +277,7 @@ export default function AdminPage() {
     const assignments = matrixData[userId] ?? [];
     await fetch(`${getApiBase()}/admin/users/${userId}/workspaces`, {
       method: "PUT",
-      headers,
+      headers: buildHeaders(),
       body: JSON.stringify(assignments),
     });
     setMatrixSaving((p) => ({ ...p, [userId]: false }));
@@ -285,11 +288,11 @@ export default function AdminPage() {
     setWsDialogOpen(true);
     // Load all workspaces if not yet loaded
     if (allWorkspaces.length === 0) {
-      const res = await fetch(`${getApiBase()}/admin/workspaces`, { headers });
+      const res = await fetch(`${getApiBase()}/admin/workspaces`, { headers: buildHeaders() });
       if (res.ok) setAllWorkspaces(await res.json());
     }
     // Load current assignments for this user
-    const res2 = await fetch(`${getApiBase()}/admin/users/${u.id}/workspaces`, { headers });
+    const res2 = await fetch(`${getApiBase()}/admin/users/${u.id}/workspaces`, { headers: buildHeaders() });
     if (res2.ok) {
       setWsAssignments(await res2.json());
     } else {
@@ -325,7 +328,7 @@ export default function AdminPage() {
     setWsSaving(true);
     const res = await fetch(`${getApiBase()}/admin/users/${wsDialogUser.id}/workspaces`, {
       method: "PUT",
-      headers,
+      headers: buildHeaders(),
       body: JSON.stringify(wsAssignments),
     });
     setWsSaving(false);
@@ -367,7 +370,7 @@ export default function AdminPage() {
     e.preventDefault();
     const res = await fetch(`${getApiBase()}/admin/users`, {
       method: "POST",
-      headers,
+      headers: buildHeaders(),
       body: JSON.stringify({
         username: userForm.username,
         password: userForm.password,
@@ -408,18 +411,44 @@ export default function AdminPage() {
     if (!changePwUser) return;
     setChangePwLoading(true);
     setChangePwError(null);
-    const res = await fetch(`${getApiBase()}/admin/users/${changePwUser.id}/change-password`, {
-      method: "POST",
-      headers,
-      body: JSON.stringify({ new_password: changePwForm.password }),
-    });
-    setChangePwLoading(false);
-    if (res.ok) {
-      setChangePwDialogOpen(false);
-      setChangePwUser(null);
-    } else {
-      const d = await res.json().catch(() => ({}));
-      setChangePwError(d.detail || "Ошибка смены пароля");
+    try {
+      const res = await fetch(`${getApiBase()}/admin/users/${changePwUser.id}/change-password`, {
+        method: "POST",
+        headers: buildHeaders(),
+        body: JSON.stringify({ new_password: changePwForm.password }),
+      });
+      if (res.ok) {
+        const currentUsername = getStoredUser();
+        const isSelfChange = currentUsername && changePwUser.username === currentUsername;
+        if (isSelfChange) {
+          saveAuthCredentials(currentUsername, changePwForm.password);
+        }
+        toast.success(
+          isSelfChange
+            ? `Пароль admin обновлён. Сессия сохранена.`
+            : `Пароль пользователя ${changePwUser.username} обновлён.`
+        );
+        setChangePwDialogOpen(false);
+        setChangePwUser(null);
+        setChangePwForm({ password: "", confirm: "" });
+        loadUsers();
+      } else {
+        const d = await res.json().catch(() => ({}));
+        const msg =
+          res.status === 401
+            ? "Сессия истекла, войдите заново"
+            : res.status === 403
+            ? "Недостаточно прав (нужна роль admin)"
+            : d.detail || "Ошибка смены пароля";
+        setChangePwError(msg);
+        toast.error(msg);
+      }
+    } catch (err) {
+      const msg = "Сетевая ошибка: не удалось обратиться к API";
+      setChangePwError(msg);
+      toast.error(msg);
+    } finally {
+      setChangePwLoading(false);
     }
   };
 
@@ -438,7 +467,7 @@ export default function AdminPage() {
     if (!editingUser) return;
     const res = await fetch(`${getApiBase()}/admin/users/${editingUser.id}`, {
       method: "PATCH",
-      headers,
+      headers: buildHeaders(),
       body: JSON.stringify({
         displayName: userEditForm.display_name || null,
         email: userEditForm.email || null,
@@ -454,7 +483,7 @@ export default function AdminPage() {
   const handleToggleUserActive = async (u: UserRow) => {
     const res = await fetch(`${getApiBase()}/admin/users/${u.id}`, {
       method: "PATCH",
-      headers,
+      headers: buildHeaders(),
       body: JSON.stringify({ isActive: !u.is_active }),
     });
     if (res.ok) {
@@ -465,7 +494,7 @@ export default function AdminPage() {
   const handleAssignRole = async (userId: number, role: string) => {
     const res = await fetch(`${getApiBase()}/admin/users/${userId}`, {
       method: "PATCH",
-      headers,
+      headers: buildHeaders(),
       body: JSON.stringify({ role }),
     });
     if (res.ok) loadUsers();
@@ -475,7 +504,7 @@ export default function AdminPage() {
     e.preventDefault();
     const res = await fetch(`${getApiBase()}/admin/roles`, {
       method: "POST",
-      headers,
+      headers: buildHeaders(),
       body: JSON.stringify({ name: roleName.trim() }),
     });
     if (!res.ok) {
@@ -490,7 +519,7 @@ export default function AdminPage() {
 
   const handleDeleteRole = async (roleId: number) => {
     if (!window.confirm(t("adminDeleteConfirmRole"))) return;
-    const res = await fetch(`${getApiBase()}/admin/roles/${roleId}`, { method: "DELETE", headers });
+    const res = await fetch(`${getApiBase()}/admin/roles/${roleId}`, { method: "DELETE", headers: buildHeaders() });
     if (res.ok) loadRoles();
   };
 
@@ -499,7 +528,7 @@ export default function AdminPage() {
     if (editingCompany) {
       const res = await fetch(`${getApiBase()}/admin/companies/${editingCompany.id}`, {
         method: "PATCH",
-        headers,
+        headers: buildHeaders(),
         body: JSON.stringify({ name: companyForm.name, code: companyForm.code }),
       });
       if (res.ok) {
@@ -512,7 +541,7 @@ export default function AdminPage() {
     } else {
       const res = await fetch(`${getApiBase()}/admin/companies`, {
         method: "POST",
-        headers,
+        headers: buildHeaders(),
         body: JSON.stringify(companyForm),
       });
       if (!res.ok) {
@@ -528,7 +557,7 @@ export default function AdminPage() {
 
   const handleDeleteCompany = async (id: number) => {
     if (!window.confirm(t("adminDeleteConfirmCompany"))) return;
-    const res = await fetch(`${getApiBase()}/admin/companies/${id}`, { method: "DELETE", headers });
+    const res = await fetch(`${getApiBase()}/admin/companies/${id}`, { method: "DELETE", headers: buildHeaders() });
     if (res.ok) loadCompanies();
   };
 
@@ -1573,6 +1602,11 @@ export default function AdminPage() {
               )}
             </DialogHeader>
             <div className="grid gap-4 py-4">
+              {changePwUser && changePwUser.username === getStoredUser() && (
+                <div className="rounded-md bg-amber-500/10 text-amber-700 dark:text-amber-400 px-3 py-2 text-xs">
+                  Это ваша учётная запись. После сохранения сессия будет автоматически обновлена под новый пароль.
+                </div>
+              )}
               {changePwError && (
                 <div className="rounded-md bg-destructive/10 text-destructive px-3 py-2 text-sm">
                   {changePwError}
