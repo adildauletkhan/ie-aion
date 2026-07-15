@@ -18,7 +18,7 @@ import { Separator } from '@/components/ui/separator'
 
 import {
   Workflow, Box, CalendarRange, FileBarChart2, Gauge, Plug,
-  ClipboardList, TrendingUp, ShieldCheck, ShieldAlert,
+  AlertTriangle, ClipboardList, TrendingUp, ShieldCheck, ShieldAlert,
   ArrowRight, CalendarClock,
 } from 'lucide-react'
 
