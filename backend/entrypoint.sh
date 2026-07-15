@@ -24,5 +24,9 @@ echo "Seeding EMG workspace data (idempotent)..."
 python3 seed_emg_data.py || echo "⚠️  EMG seed skipped (non-critical)"
 
 echo ""
+echo "Seeding construction demo project (idempotent)..."
+python3 seed_construction.py || echo "⚠️  Construction seed skipped (non-critical)"
+
+echo ""
 echo "Starting Uvicorn server..."
 exec uvicorn app.main:app --host 0.0.0.0 --port ${PORT:-8000}
