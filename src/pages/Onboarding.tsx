@@ -7,7 +7,8 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import {
-  Zap, Flame, Pickaxe, Factory, GitCommit, CheckCircle2, Droplets, Wind
+  Zap, Flame, Pickaxe, Factory, GitCommit, CheckCircle2, Droplets, Wind,
+  HardHat,
 } from 'lucide-react'
 import { useTheme } from '@/hooks/useTheme'
 
@@ -65,6 +66,14 @@ const INDUSTRIES: IndustryOption[] = [
     icon: <Wind className="h-7 w-7" />,
     modulesCount: 7,
     badge: 'QazaqGas · ИЦА',
+  },
+  {
+    id: 'construction',
+    label: 'Строительство',
+    description: 'Капитальное строительство — 4D BIM, контроль СМР, план/факт',
+    icon: <HardHat className="h-7 w-7" />,
+    modulesCount: 8,
+    badge: '4D BIM',
   },
 ]
 

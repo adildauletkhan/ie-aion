@@ -13,6 +13,7 @@ import { EnergyDashboard } from "@/components/home/EnergyDashboard";
 import { MiningDashboard } from "@/components/home/MiningDashboard";
 import { OilPipelineDashboard } from "@/components/home/OilPipelineDashboard";
 import { GasPipelineDashboard } from "@/components/home/GasPipelineDashboard";
+import { ConstructionDashboard } from "@/components/home/ConstructionDashboard";
 import { useCompanyProfile } from "@/context/CompanyProfileContext";
 
 /* ─── types ─────────────────────────────────────────────────────────────── */
@@ -194,6 +195,7 @@ const Index = () => {
   if (profile.industry === 'mining')       return <MiningDashboard />;
   if (profile.industry === 'pipeline_oil') return <OilPipelineDashboard />;
   if (profile.industry === 'pipeline_gas') return <GasPipelineDashboard />;
+  if (profile.industry === 'construction') return <ConstructionDashboard />;
 
   const { t } = useLanguage();
   const { theme } = useTheme();

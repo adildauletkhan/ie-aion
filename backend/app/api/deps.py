@@ -1,9 +1,10 @@
 import secrets
 
-from fastapi import Depends, HTTPException, status
+from fastapi import Depends, Header, HTTPException, status
 from fastapi.security import HTTPBasic, HTTPBasicCredentials
 from sqlalchemy.orm import Session
 
+from app.core.config import get_settings
 from app.core.security import verify_password
 from app.crud.user import get_by_username
 from app.db.session import SessionLocal
@@ -40,3 +41,20 @@ def require_admin(current_user: User = Depends(get_current_user)) -> User:
     if current_user.role != "admin":
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Admin role required")
     return current_user
+
+
+def verify_bot_api_key(x_bot_api_key: str | None = Header(default=None)) -> None:
+    """
+    Аутентификация машинного доступа Telegram-бота по заголовку X-Bot-Api-Key.
+
+    Ключ сверяется с переменной окружения BOT_BACKEND_API_KEY. Применяется только к
+    эндпоинтам, которые дёргает бот (active-tasks, journal POST, link-telegram,
+    by-telegram) — пользовательские UI-эндпоинты остаются под Basic Auth, два
+    механизма не смешиваются на одном эндпоинте.
+    """
+    expected = get_settings().bot_backend_api_key
+    if not expected or not x_bot_api_key or not secrets.compare_digest(x_bot_api_key, expected):
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Invalid or missing bot API key",
+        )

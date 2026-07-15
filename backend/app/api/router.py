@@ -1,7 +1,7 @@
 from fastapi import APIRouter
 
 from app.api.routes import ai, annual_plans, capacity, crisis, digital_twin, entities, field_schemes, master_data, scenarios, admin, me, activity
-from app.api.routes import reservoir_twin, wells, well_logs
+from app.api.routes import reservoir_twin, wells, well_logs, construction
 
 api_router = APIRouter(prefix="/api")
 api_router.include_router(me.router, tags=["me"])
@@ -19,3 +19,4 @@ api_router.include_router(wells.router, tags=["wells"])
 api_router.include_router(well_logs.router, tags=["well-logs"])
 api_router.include_router(admin.router, tags=["admin"])
 api_router.include_router(activity.router, tags=["activity"])
+api_router.include_router(construction.router, tags=["construction"])

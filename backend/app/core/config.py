@@ -25,6 +25,10 @@ class Settings:
         self.openai_api_key = os.environ.get("OPENAI_API_KEY", "")
         self.openai_model = os.environ.get("OPENAI_MODEL", "gpt-4o-mini")
 
+        # Ключ для машинного доступа Telegram-бота к construction-эндпоинтам.
+        # Та же строка должна быть задана как BOT_BACKEND_API_KEY в окружении бота.
+        self.bot_backend_api_key = os.environ.get("BOT_BACKEND_API_KEY", "")
+
     @property
     def cors_origins_list(self) -> List[str]:
         return self.cors_origins

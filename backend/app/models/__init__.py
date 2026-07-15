@@ -33,6 +33,17 @@ from app.models.role import Role
 from app.models.company import Company
 from app.models.user_activity_log import UserActivityLog
 from app.models.reservoir_twin import ReservoirHorizon, ReservoirFormation, ReservoirDrainageZone
+from app.models.construction import (
+    ConstructionProject,
+    Phase,
+    ScheduleTask,
+    ZonePlanFact,
+    Deviation,
+    ProgressCurvePoint,
+    Crew,
+    Foreman,
+    DailyJournalEntry,
+)
 
 __all__ = [
     "User",
@@ -70,4 +81,13 @@ __all__ = [
     "ReservoirHorizon",
     "ReservoirFormation",
     "ReservoirDrainageZone",
+    "ConstructionProject",
+    "Phase",
+    "ScheduleTask",
+    "ZonePlanFact",
+    "Deviation",
+    "ProgressCurvePoint",
+    "Crew",
+    "Foreman",
+    "DailyJournalEntry",
 ]

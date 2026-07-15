@@ -1,4 +1,4 @@
-export type IndustryId = 'upstream' | 'refinery' | 'mining' | 'energy' | 'pipeline' | 'pipeline_oil' | 'pipeline_gas'
+export type IndustryId = 'upstream' | 'refinery' | 'mining' | 'energy' | 'pipeline' | 'pipeline_oil' | 'pipeline_gas' | 'construction'
 
 export interface KpiDef {
   id: string

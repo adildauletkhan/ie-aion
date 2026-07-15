@@ -4,7 +4,7 @@ import {
   TrendingDown, FileBarChart2, ChevronDown, Calendar, Zap,
   LayoutDashboard, BrainCircuit, FileText, Leaf, Box, Settings, Map,
   Building2, Mountain, HardHat, Pickaxe, Truck, Factory,
-  Route, Gauge, Droplets, Wind, Wrench, Flame,
+  Route, Gauge, Droplets, Wind, Wrench, Flame, ScanEye, ClipboardList,
 } from "lucide-react";
 import { NavLink } from "@/components/NavLink";
 import { useState, useEffect } from "react";
@@ -18,10 +18,10 @@ import { isAdmin, setIsAdmin, getAuthHeader } from "@/lib/auth";
 
 const ICON_MAP: Record<string, React.ElementType> = {
   LayoutDashboard, BrainCircuit, FileText, Leaf, Box, Map,
-  AlertTriangle, Calendar, Plug, Home, Cuboid, TrendingDown,
+  AlertTriangle, Calendar, CalendarRange, Plug, Home, Cuboid, TrendingDown,
   FileBarChart2, Zap, Database, BarChart3, Layers, Building2,
   Mountain, HardHat, Pickaxe, Truck, Factory,
-  Route, Gauge, Droplets, Wind, Wrench, Flame,
+  Route, Gauge, Droplets, Wind, Wrench, Flame, Shield, Workflow, ScanEye, ClipboardList,
 };
 
 const INDUSTRY_LABEL_KEYS: Record<IndustryId, string> = {
@@ -32,6 +32,7 @@ const INDUSTRY_LABEL_KEYS: Record<IndustryId, string> = {
   pipeline:     'industryPipeline',
   pipeline_oil: 'industryPipelineOil',
   pipeline_gas: 'industryPipelineGas',
+  construction: 'industryConstruction',
 };
 
 export function AppSidebar() {
@@ -72,7 +73,8 @@ export function AppSidebar() {
   const isMining = profile.industry === 'mining';
   const isPipelineOil = profile.industry === 'pipeline_oil';
   const isPipelineGas = profile.industry === 'pipeline_gas';
-  const useDynamicNav = isEnergy || isMining || isPipelineOil || isPipelineGas;
+  const isConstruction = profile.industry === 'construction';
+  const useDynamicNav = isEnergy || isMining || isPipelineOil || isPipelineGas || isConstruction;
   const industryPack = getIndustryPack();
 
   // auto-expand planning group when a planning route is active

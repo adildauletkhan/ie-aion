@@ -48,6 +48,14 @@ import TechSchemeKTO from "./pages/TechSchemeKTO";
 import CompanyDailyBriefing from "./pages/CompanyDailyBriefing";
 import IntegrityManagementPage from "./pages/IntegrityManagementPage";
 import GasPipelineMonitoring from "./pages/GasPipelineMonitoring";
+import Construction4D from "./pages/Construction4D";
+import ConstructionProgress from "./pages/ConstructionProgress";
+import ConstructionBudget from "./pages/ConstructionBudget";
+import ConstructionDigitalTwin from "./pages/ConstructionDigitalTwin";
+import ConstructionPlanning from "./pages/ConstructionPlanning";
+import ConstructionCV from "./pages/ConstructionCV";
+import ConstructionCrews from "./pages/ConstructionCrews";
+import ConstructionJournal from "./pages/ConstructionJournal";
 import { OnboardingGuard } from "./components/OnboardingGuard";
 import { AdminGuard } from "./components/AdminGuard";
 import { useEffect } from "react";
@@ -142,6 +150,14 @@ const App = () => (
                     <Route path="/gas-pipeline-compressors" element={<GasPipelineMonitoring />} />
                     <Route path="/gas-pipeline-balance" element={<GasPipelineMonitoring />} />
                     <Route path="/gas-pipeline-incidents" element={<GasPipelineMonitoring />} />
+                    <Route path="/construction-4d" element={<Construction4D />} />
+                    <Route path="/construction-planning" element={<ConstructionPlanning />} />
+                    <Route path="/construction-progress" element={<ConstructionProgress />} />
+                    <Route path="/construction-crews" element={<ConstructionCrews />} />
+                    <Route path="/construction-journal" element={<ConstructionJournal />} />
+                    <Route path="/construction-cv" element={<ConstructionCV />} />
+                    <Route path="/construction-budget" element={<ConstructionBudget />} />
+                    <Route path="/construction-digital-twin" element={<ConstructionDigitalTwin />} />
                     <Route path="*" element={<NotFound />} />
                   </Routes>
                 </AppLayout>

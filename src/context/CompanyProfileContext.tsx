@@ -5,6 +5,7 @@ import { upstreamPack } from '@/config/industries/upstream'
 import { miningPack } from '@/config/industries/mining'
 import { pipelineOilPack } from '@/config/industries/pipeline_oil'
 import { pipelineGasPack } from '@/config/industries/pipeline_gas'
+import { constructionPack } from '@/config/industries/construction'
 
 export interface CompanyProfile {
   companyName: string
@@ -29,6 +30,7 @@ const INDUSTRY_PACKS: Record<IndustryId, IndustryPack> = {
   },
   pipeline_oil: pipelineOilPack,
   pipeline_gas: pipelineGasPack,
+  construction: constructionPack,
 }
 
 const DEFAULT_PROFILE: CompanyProfile = {
