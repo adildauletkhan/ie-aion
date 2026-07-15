@@ -410,14 +410,12 @@ export function AppSidebar() {
         </NavLink>
       </div>
 
-      {/* Footer */}
-      {!collapsed && (
+      {/* Footer — workspace label hidden for construction (no company switcher) */}
+      {!collapsed && !isConstruction && activeWorkspace && (
         <div className="border-t border-sidebar-border px-4 py-3 space-y-1">
-          {activeWorkspace && (
-            <p className="text-[10px] text-sidebar-foreground/60 text-center leading-tight truncate font-medium">
-              {tt(activeWorkspace.shortName ?? activeWorkspace.name)}
-            </p>
-          )}
+          <p className="text-[10px] text-sidebar-foreground/60 text-center leading-tight truncate font-medium">
+            {tt(activeWorkspace.shortName ?? activeWorkspace.name)}
+          </p>
         </div>
       )}
     </aside>

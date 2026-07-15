@@ -32,7 +32,6 @@ export const constructionPack: IndustryPack = {
     { id: 'journal',        label: 'Суточный журнал',          icon: 'ClipboardList',   route: '/construction-journal'      },
     { id: 'cv_monitoring',  label: 'CV-мониторинг (дрон)',     icon: 'ScanEye',         route: '/construction-cv'           },
     { id: 'digital_twin',   label: 'Цифровой двойник стройки', icon: 'Workflow',        route: '/construction-digital-twin' },
-    { id: 'crisis',         label: 'Кризис-центр',             icon: 'AlertTriangle',   route: '/crisis-response'           },
     { id: 'integrations',   label: 'Интеграции',               icon: 'Plug',            route: '/integrations'              },
   ],
   integrations: [

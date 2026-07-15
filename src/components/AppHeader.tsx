@@ -13,6 +13,7 @@ import {
 } from "lucide-react";
 import { useLanguage } from "@/hooks/useLanguage";
 import { useTheme } from "@/hooks/useTheme";
+import { useCompanyProfile } from "@/context/CompanyProfileContext";
 import { WorkspaceSwitcher } from "@/components/WorkspaceSwitcher";
 import {
   clearAuthCredentials,
@@ -47,7 +48,9 @@ const NOTIFICATIONS_COUNT = 2; // TODO: from API
 export function AppHeader() {
   const { t, language, setLanguage } = useLanguage();
   const { theme, toggleTheme } = useTheme();
+  const { profile } = useCompanyProfile();
   const navigate = useNavigate();
+  const showWorkspaceSwitcher = profile.industry !== "construction";
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [profileOpen, setProfileOpen] = useState(false);
   const [avatarUrl, setAvatarUrlState] = useState<string | null>(() => getAvatarUrl());
@@ -102,9 +105,12 @@ export function AppHeader() {
   return (
     <>
       <header className="h-14 shrink-0 flex items-center justify-end gap-1 px-4 border-b border-border bg-background">
-        {/* Workspace switcher */}
-        <WorkspaceSwitcher />
-        <div className="w-px h-5 bg-border mx-1" />
+        {showWorkspaceSwitcher && (
+          <>
+            <WorkspaceSwitcher />
+            <div className="w-px h-5 bg-border mx-1" />
+          </>
+        )}
         {/* Language */}
         <Button
           variant="ghost"

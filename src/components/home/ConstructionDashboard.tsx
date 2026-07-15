@@ -160,7 +160,7 @@ export function ConstructionDashboard() {
 
   const quickActions = [
     { label: '4D-модель',                 icon: Box,          route: '/construction-4d' },
-    { label: 'График и планирование',     icon: CalendarRange, route: '/planning' },
+    { label: 'График и планирование',     icon: CalendarRange, route: '/construction-planning' },
     { label: 'Контроль СМР · план/факт',  icon: Gauge,        route: '/construction-progress' },
     { label: 'Цифровой двойник стройки',  icon: Workflow,     route: '/construction-digital-twin' },
   ]
