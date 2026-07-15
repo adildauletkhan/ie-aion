@@ -18,7 +18,7 @@ import { Separator } from '@/components/ui/separator'
 
 import {
   Workflow, Box, CalendarRange, FileBarChart2, Gauge, Plug,
-  AlertTriangle, TrendingUp, ShieldCheck, ShieldAlert,
+  ClipboardList, TrendingUp, ShieldCheck, ShieldAlert,
   ArrowRight, CalendarClock,
 } from 'lucide-react'
 
@@ -66,10 +66,10 @@ const FORECAST_LABEL: Record<Forecast['metric'], string> = {
 
 const QUICK_LINKS = [
   { label: '4D-модель',                icon: Box,            route: '/construction-4d',           color: '#0d9488' },
-  { label: 'График и планирование',    icon: CalendarRange,  route: '/planning',                  color: '#0d9488' },
+  { label: 'График и планирование',    icon: CalendarRange,  route: '/construction-planning',     color: '#0d9488' },
   { label: 'Смета и бюджет',           icon: FileBarChart2,  route: '/construction-budget',       color: '#0d9488' },
   { label: 'Контроль СМР · план/факт', icon: Gauge,          route: '/construction-progress',     color: '#0d9488' },
-  { label: 'Кризис-центр',             icon: AlertTriangle,  route: '/crisis-response',           color: '#ef4444' },
+  { label: 'Суточный журнал',          icon: ClipboardList,  route: '/construction-journal',      color: '#0d9488' },
   { label: 'Интеграции',               icon: Plug,           route: '/integrations',              color: '#0d9488' },
 ] as const
 
@@ -329,9 +329,9 @@ export default function ConstructionDigitalTwin() {
               variant="ghost"
               size="sm"
               className="w-full text-xs h-8"
-              onClick={() => navigate('/crisis-response')}
+              onClick={() => navigate('/construction-progress')}
             >
-              Все инциденты в кризис-центре <ArrowRight className="h-3 w-3 ml-1" />
+              Все отклонения в контроле СМР <ArrowRight className="h-3 w-3 ml-1" />
             </Button>
           </CardContent>
         </Card>
