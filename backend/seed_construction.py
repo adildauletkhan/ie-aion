@@ -11,6 +11,8 @@ mock→API интерфейс показывал те же данные. Иде�
 import datetime as dt
 import uuid
 
+from sqlalchemy import select
+
 from app.db.session import SessionLocal
 from app.models.construction import (
     ConstructionProject,
@@ -107,11 +109,63 @@ DEVIATIONS = [
 ]
 
 
+DEMO_INVITE_CODE = "INV-DEMO01"
+DEMO_FOREMAN_NAME = "Ержан Бектасов"
+
+
+def _ensure_demo_foreman(db) -> None:
+    """Идемпотентно гарантирует демо-бригадира с INV-DEMO01 (для теста бота)."""
+    existing_invite = db.scalars(
+        select(Foreman).where(Foreman.invite_code == DEMO_INVITE_CODE)
+    ).first()
+    if existing_invite is not None:
+        print(f"Демо-бригадир уже есть, invite_code = {DEMO_INVITE_CODE}")
+        return
+
+    # Если бригадир есть, но код уже погашен/другой — восстановим INV-DEMO01 только
+    # когда аккаунт ещё не привязан к Telegram.
+    existing_named = db.scalars(
+        select(Foreman).where(
+            Foreman.project_id == PROJECT_ID,
+            Foreman.full_name == DEMO_FOREMAN_NAME,
+            Foreman.telegram_link_status != "linked",
+        )
+    ).first()
+    if existing_named is not None:
+        existing_named.invite_code = DEMO_INVITE_CODE
+        existing_named.telegram_link_status = "invited"
+        print(f"Восстановлен invite_code = {DEMO_INVITE_CODE} для {DEMO_FOREMAN_NAME}")
+        return
+
+    crew = db.scalars(
+        select(Crew).where(Crew.project_id == PROJECT_ID, Crew.name == "Монолит-1 (БС-1)")
+    ).first()
+    if crew is None:
+        crew = Crew(
+            crew_id=uuid.uuid4(), project_id=PROJECT_ID, name="Монолит-1 (БС-1)",
+            contractor_name="КазСтройМонолит", specialization="Монолитные работы",
+            planned_headcount=18,
+        )
+        db.add(crew)
+        db.flush()
+
+    db.add(Foreman(
+        foreman_id=uuid.uuid4(), project_id=PROJECT_ID,
+        full_name=DEMO_FOREMAN_NAME, phone="+7 701 000 00 00", role="brigadier",
+        crew_id=crew.crew_id, default_zone="БС-1 · этажи 1-6",
+        telegram_link_status="invited", invite_code=DEMO_INVITE_CODE,
+    ))
+    print(f"Создан демо-бригадир {DEMO_FOREMAN_NAME}, invite_code = {DEMO_INVITE_CODE}")
+
+
 def seed() -> None:
     db = SessionLocal()
     try:
-        if db.get(ConstructionProject, PROJECT_ID) is not None:
-            print(f"Проект {PROJECT_ID} уже существует — пропуск seed.")
+        project = db.get(ConstructionProject, PROJECT_ID)
+        if project is not None:
+            print(f"Проект {PROJECT_ID} уже существует — пропускаем полный seed.")
+            _ensure_demo_foreman(db)
+            db.commit()
             return
 
         data_date = _d("2026-06-01")
@@ -161,25 +215,11 @@ def seed() -> None:
 
         # Помесячная S-кривая PV/EV/AC от старта до data_date (упрощённо, кумулятивно)
         _seed_progress_curve(db, project, data_date)
-
-        # Демо-бригада и бригадир с фиксированным invite_code для теста бота.
-        crew = Crew(
-            crew_id=uuid.uuid4(), project_id=PROJECT_ID, name="Монолит-1 (БС-1)",
-            contractor_name="КазСтройМонолит", specialization="Монолитные работы",
-            planned_headcount=18,
-        )
-        db.add(crew)
-        db.flush()
-        db.add(Foreman(
-            foreman_id=uuid.uuid4(), project_id=PROJECT_ID,
-            full_name="Ержан Бектасов", phone="+7 701 000 00 00", role="brigadier",
-            crew_id=crew.crew_id, default_zone="БС-1 · этажи 1-6",
-            telegram_link_status="invited", invite_code="INV-DEMO01",
-        ))
+        _ensure_demo_foreman(db)
 
         db.commit()
         print(f"Seed завершён: проект {PROJECT_ID}, {len(TASKS)} задач, {len(PHASES)} фаз.")
-        print("Демо-бригадир Ержан Бектасов, invite_code = INV-DEMO01")
+        print(f"Демо-бригадир {DEMO_FOREMAN_NAME}, invite_code = {DEMO_INVITE_CODE}")
     finally:
         db.close()
 

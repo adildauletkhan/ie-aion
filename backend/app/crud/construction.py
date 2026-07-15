@@ -244,12 +244,18 @@ def _generate_invite_code(db: Session) -> str:
 
 
 def create_foreman(db: Session, project_id: str, data: dict) -> Foreman:
+    payload = dict(data)
+    crew_id = payload.pop("crew_id", None)
+    if crew_id is not None and not isinstance(crew_id, uuid.UUID):
+        crew_id = uuid.UUID(str(crew_id))
+    # invite_code / telegram_link_status задаём явно — не даём payload их перетереть
     foreman = Foreman(
         foreman_id=uuid.uuid4(),
         project_id=project_id,
         invite_code=_generate_invite_code(db),
         telegram_link_status="invited",
-        **data,
+        crew_id=crew_id,
+        **payload,
     )
     db.add(foreman)
     db.flush()

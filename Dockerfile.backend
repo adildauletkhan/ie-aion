@@ -1,4 +1,4 @@
-# build-stamp: 2026-07-15-construction-v1
+# build-stamp: 2026-07-16-demo-invite-v2
 FROM python:3.13-slim
 
 # Install system dependencies
