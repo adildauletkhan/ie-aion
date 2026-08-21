@@ -1,3 +1,4 @@
+from sqlalchemy import or_
 from sqlalchemy.orm import Session
 
 from app.models.master_data import (
@@ -111,7 +112,14 @@ def list_oil_fields(
 ) -> list[OilField]:
     q = db.query(OilField)
     if extraction_company_id is not None:
-        q = q.filter(OilField.extraction_company_id == extraction_company_id)
+        # Legacy rows often have extraction_company_id = NULL.
+        # Keep them visible so DZO workspaces don't get an empty field list.
+        q = q.filter(
+            or_(
+                OilField.extraction_company_id == extraction_company_id,
+                OilField.extraction_company_id.is_(None),
+            )
+        )
     if ngdu_id is not None:
         q = q.filter(OilField.ngdu_id == ngdu_id)
     return q.order_by(OilField.id.asc()).all()

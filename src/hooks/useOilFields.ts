@@ -17,11 +17,13 @@ export interface OilFieldOption {
  * - "own" (ЭМГ) → returns only oil fields belonging to the active extraction company
  */
 export function useOilFields() {
-  const { activeCompanyId, isGlobalScope } = useWorkspace();
+  const { activeCompanyId, isGlobalScope, loading: workspaceLoading } = useWorkspace();
   const [oilFields, setOilFields] = useState<OilFieldOption[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
+    if (workspaceLoading) return;
+
     const controller = new AbortController();
     const authHeader = getAuthHeader();
 
@@ -32,6 +34,7 @@ export function useOilFields() {
 
     setLoading(true);
     fetch(url, {
+      credentials: "include",
       headers: {
         "Content-Type": "application/json",
         ...(authHeader ? { Authorization: authHeader } : {}),
@@ -39,12 +42,12 @@ export function useOilFields() {
       signal: controller.signal,
     })
       .then((r) => (r.ok ? r.json() : []))
-      .then((data: OilFieldOption[]) => setOilFields(data))
+      .then((data: OilFieldOption[]) => setOilFields(Array.isArray(data) ? data : []))
       .catch(() => setOilFields([]))
       .finally(() => setLoading(false));
 
     return () => controller.abort();
-  }, [activeCompanyId, isGlobalScope]);
+  }, [activeCompanyId, isGlobalScope, workspaceLoading]);
 
   return { oilFields, loading };
 }
